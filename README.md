@@ -1,2 +1,2 @@
 # laurens
-A G Machine implementation in Haskell, named after Laurens de Graaf
+A Spineless, Tagless G-machine Implementation in PyPy
