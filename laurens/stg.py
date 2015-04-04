@@ -62,6 +62,10 @@ def mainloop(program, bracket_map):
 
         pc += 1
 
+        ## Case Expression
+        # 1. Force the value
+        # 2. Dispatch cleverly (Sec. 9.4.3)
+
 def run(fp):
     program_contents = ""
     while True:
