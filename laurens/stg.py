@@ -66,6 +66,30 @@ def mainloop(program, bracket_map):
         # 1. Force the value
         # 2. Dispatch cleverly (Sec. 9.4.3)
 
+def newloop(code,gobal_env):
+  pc = 0
+  arg_stack = ArgStack()
+  ret_stack = ReturnStack()
+  upd_stack = UpdateStack()
+  heap      = Heap()
+
+  while pc < 100:
+    op = pc[code]
+
+    if op.code = "Eval":
+      op.
+
+    elif op.code = "Enter":
+
+    elif op.ret_con = "ReturnCon":
+
+    elif op.ret_int = "ReturnInt":
+
+
+
+  
+
+
 def run(fp):
     program_contents = ""
     while True:
