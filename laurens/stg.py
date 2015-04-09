@@ -6,7 +6,8 @@ import os
 import sys
 import parse
 import config
-import data.tape
+from data.stack import Stack
+import ast.ast
 
 from rpython.rlib.jit import JitDriver, purefunction
 
@@ -66,28 +67,38 @@ def mainloop(program, bracket_map):
         # 1. Force the value
         # 2. Dispatch cleverly (Sec. 9.4.3)
 
-def newloop(code,gobal_env):
+def val(env,global_env,k):
+  if isinstance(k, list):
+    return map(lambda v : value(env, global_env, v), k)
+  if k.isLit():
+   return Value(k.value, True)
+  elif env.contains(k):
+    return env.lookup(k)
+  else:
+    return global_env.lookup(k)
+
+def loop(heap, gobal_env):
   pc = 0
-  arg_stack = ArgStack()
-  ret_stack = ReturnStack()
-  upd_stack = UpdateStack()
-  heap      = Heap()
+  arg_stack = Stack()
+  ret_stack = Stack()
+  upd_stack = Stack()
 
-  while pc < 100:
-    op = pc[code]
+  code = op.Eval(ast.ast.App(ast.ast.Var("main"), []), [])
 
-    if op.code = "Eval":
-      op.
+  if code.op == op.EvalOp:
+    if isinstance(code.expr, ast.ast.App):
+      f = val(code.env, global_env, code.expr.rator)
+      if (f.isAddr):
+        code = op.Enter(f.value)
+        arg_stack.extend(val(code.env, global_env, code.expr.rands))
 
-    elif op.code = "Enter":
-
-    elif op.ret_con = "ReturnCon":
-
-    elif op.ret_int = "ReturnInt":
-
-
-
+  elif code.op == op.EnterOp:
+    
   
+  elif code.op == op.ReturnConOp:
+  
+  elif code.op == op.ReturnIntOp:
+      
 
 
 def run(fp):
