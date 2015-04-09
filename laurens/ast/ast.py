@@ -81,13 +81,14 @@ class PrimOp(object):
   def __init__(self, op):
     self.primop = op
 
-class VarList(object):
-  def __init__(self, variables):
-    self.variables = variables
-   
-class AtomList(object):
-  def __init__(self, atoms):
-    self.atoms = atoms
+## I'm using Python built-in lists for this so I don't need these.
+# class VarList(object):
+#   def __init__(self, variables):
+#     self.variables = variables
+#    
+# class AtomList(object):
+#   def __init__(self, atoms):
+#     self.atoms = atoms
 
 class Atom(object):
   def __init__(self, value, varHuh):
