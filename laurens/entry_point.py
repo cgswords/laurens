@@ -6,7 +6,8 @@ import os
 import sys
 import stg
 import config
-import stg
+from stg import run
+from parse import parse
 
 def entry_point(argv):
     try:

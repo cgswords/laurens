@@ -4,103 +4,74 @@ Laurens main loop. Pretty bare-bones right now.
 
 import os
 import sys
-import parse
 import config
-from data.stack import Stack
 import ast.ast
+import ast.cont
+import op
+
+from parse        import parse
 from data.closure import Closure
+from data.stack   import Stack
 
 from rpython.rlib.jit import JitDriver, purefunction
 
-def get_location(pc, program, bracket_map):
+def get_location(code, arg_stack, ret_stack, upd_stack, heap):
     return "%s_%s_%s" % (
-            program[:pc], program[pc], program[pc+1:]
+            code, arg_stack, ret_stack
             )
 
-jitdriver = JitDriver(greens=['pc', 'program', 'bracket_map'], reds=['tape'],
+jitdriver = JitDriver(greens=['code', 'arg_stack', 'ret_stack', 'upd_stack', 'heap'], reds=['global_env'],
         get_printable_location=get_location)
 
 @purefunction
-def get_matching_bracket(bracket_map, pc):
-    return bracket_map[pc]
-
-def mainloop(program, bracket_map):
-    pc = 0
-    tape = Tape()
-    
-    while pc < len(program):
-        jitdriver.jit_merge_point(pc=pc, tape=tape, program=program,
-                bracket_map=bracket_map)
-
-        code = program[pc]
-
-        if code == ">":
-            tape.advance()
-
-        elif code == "<":
-            tape.devance()
-
-        elif code == "+":
-            tape.inc()
-
-        elif code == "-":
-            tape.dec()
-        
-        elif code == ".":
-            # print
-            os.write(1, chr(tape.get()))
-        
-        elif code == ",":
-            # read from stdin
-            tape.set(ord(os.read(0, 1)[0]))
-
-        elif code == "[" and tape.get() == 0:
-            # Skip forward to the matching ]
-            pc = get_matching_bracket(bracket_map, pc)
-            
-        elif code == "]" and tape.get() != 0:
-            # Skip back to the matching [
-            pc = get_matching_bracket(bracket_map, pc)
-
-        pc += 1
-
-        ## Case Expression
-        # 1. Force the value
-        # 2. Dispatch cleverly (Sec. 9.4.3)
-
-def val(env,global_env,k):
+def val(env, global_env, k):
   if isinstance(k, list):
-    return map(lambda v : val(env, global_env, v), k)
-  if k.isLit:
-   return Value(k.value, True)
-  ## Change these to use dictionaries.
-  elif env.contains(k):
-    return env.lookup(k)
-  else:
-    return global_env.lookup(k)
+    return [val(env, global_env, v) for v in k] # map(lambda v : val(env, global_env, v), k)
+  elif type(k) is ast.ast.Atom:
+    if k.isLit:
+     return ast.ast.Value(k.value, True)
+    elif k.value in env:
+      return env[k.value]
+    else:
+      return global_env[k.value]
+  elif type(k) is ast.ast.Lit:
+    return ast.ast.Value(k.value, True)
+  elif type(k) is ast.ast.Var:
+    var = k.variable
+    if var in env:
+      return env[var]
+    elif var in global_env:
+      return global_env[var]
+  ## Let's do something catastrophic
+  raise Exception('unbound variable')
 
-def loop(heap, gobal_env):
-  pc = 0
+def loop(code, heap, global_env):
   arg_stack = Stack()
   ret_stack = Stack()
   upd_stack = Stack()
 
-  code = op.Eval(ast.ast.App(ast.ast.Var("main"), []), [])
+  code = op.Eval(ast.ast.App(ast.ast.Var("main"), []), {})
 
   if code.op == op.EvalOp:
-    if type(code.expr) == ast.ast.App:
-      f = val(code.env, global_env, code.expr.rator)
-      if (f.isAddr):
+    ce = code.expr
+    expr_type = type(ce)
 
-        arg_stack.extend(val(code.env, global_env, code.expr.rands))
+    if expr_type is ast.ast.App:
+      cenv     = code.env
+      lookup   = val(cenv, global_env, ce.rator)
+      lookupTy = type(lookup)
+      if lookupTy is ast.ast.Value:
+        if lookup.isAddr:
+          arg_stack.extend(val(cenv, global_env, ce.rands))
+          code = op.Enter(lookup.value)
+        else: 
+          raise Exception('integer literal in application position', lookup.value)
 
-        code = op.Enter(f.value)
-
-    elif type(code.expr) == ast.ast.Let:
-      let       = code.expr
+    elif expr_type is ast.ast.Let:
+      let       = ce
       local_env = code.env.copy()
       for var in let.bindings:
-        lam            = code.expr.bindings[var]
+        lam            = ce.bindings[var]
         addr           = heap.new_addr()
         clos           = Closure(lam, val(code.env,  global_env,  lam.frees))
         local_env[var] = ast.ast.Value(addr,False)
@@ -108,30 +79,30 @@ def loop(heap, gobal_env):
 
       code = op.Eval(code.expr.body,local_env)
 
-    elif type(code.expr) == ast.ast.Letrec:
-      letrec    = code.expr
+    elif expr_type is ast.ast.Letrec:
+      letrec    = ce
       local_env = code.env.copy()
       for var in letrec.bindings: # Build the addresses for the new bindings
         addr           = heap.new_addr()
         local_env[var] = ast.ast.Value(addr,False)
 
       for var in letrec.bindings: # Build the closures using the new binding.
-        lam  = code.expr.bindings[var]
+        lam  = ce.bindings[var]
         addr = local_env[var].value
         clos = Closure(lam, val(local_env,  global_env,  lam.frees))
         heap.set_addr(addr, clos)
 
-      code = op.Eval(code.expr.body,local_env)
+      code = op.Eval(ce.body,local_env)
 
-    elif type(code.expr) == ast.ast.Case:
-      case      = code.expr
+    elif expr_type is ast.ast.Case:
+      case      = ce
       local_env = code.env.copy()
-      ret_stack.push(AltCont(case.alts,code.env.copy()))
+      ret_stack.push(ast.cont.CaseCont(case.alts,code.env.copy()))
 
       code = op.Eval(code.case_expr,code.env.copy())
 
-    elif type(code.expr) == ast.ast.Constr:
-      constr = code.expr
+    elif expr_type is ast.ast.Constr:
+      constr = ce
       local_env = code.env.copy()
 
       code = op.ReturnCon(constr.constructor, 
@@ -158,7 +129,7 @@ def loop(heap, gobal_env):
         code = op.Eval(lf.expr, local_env)
   
   elif code.op == op.ReturnConOp:
-    if type(ret_stack.peek(), ast.cont.CaseCont):
+    if type(ret_stack.peek()) is ast.cont.CaseCont:
       retk              = ret_stack.pop()
       ret_env           = retk.env.copy() # Don't need to, but for safety!
       ret_alts          = retk.alts
@@ -167,12 +138,12 @@ def loop(heap, gobal_env):
       default,body,vars = constr_case_lookup(constr, ret_alts)
       if not default:
         ret_env.update(zip(vars, vals))
-      elif not (vars == None): # We're in a default case with a binder :worry:
-        bind_var     = vars
+      elif (vars is not None): # We're in a default case with a binder :worry:
+        var          = vars
         addr         = heap.new_addr()
         ret_env[var] = addr
-        new_vars     = map((lambda n: 'x'+str(n)),range(0,len(vals)))
-        new_atoms    = map((lambda x: Atom(x,True)),new_vars)
+        new_vars     = ['x' + str(n) for n in range(0, len(vals))]
+        new_atoms    = [ast.ast.Atom(x,True) for x in new_vars] # map((lambda x: Atom(x,True)),new_vars)
         heap.set_addr(addr, 
                       Closure(ast.ast.Lambda(new_vars, [], False, ast.ast.Constr(constr, new_atoms)), 
                               vals))
@@ -183,7 +154,7 @@ def loop(heap, gobal_env):
       # could easily be a source tranformation.
 
       # Finally, set up the body evaluation and kick it off.
-      code = op.Eval(body, ret.env)
+      code = op.Eval(body, ret_env)
     
   elif code.op == op.ReturnIntOp:
     # TODO: Implement Literal Cases
@@ -195,7 +166,7 @@ def constr_case_lookup(constr,ret_alts):
       return (False, alt.rhs, alt.pat_vars)
 
   # This signals we need to deal with the default case.
-  return (True, ret.alts.defailt.rhs, ret.alts.default.binder) 
+  return (True, ret.alts.default.rhs, ret.alts.default.binder) 
 
 def run(fp):
     program_contents = ""
@@ -205,5 +176,5 @@ def run(fp):
             break
         program_contents += read
     os.close(fp)
-    program, bm = parse(program_contents)
-    mainloop(program, bm)
+    program, heap, global_env = parse(program_contents)
+    loop(program, heap, global_env)

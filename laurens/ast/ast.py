@@ -9,7 +9,11 @@ class Program(object):
 
 class Bindings(object):
   def __init__(self, variables, lambdas):
-    self.bindings = dict(zip(variables, lambdas))
+    new_dict = {}
+    for (i,v) in enumerate(variables):
+      new_dict[v] = lambdas[i]
+
+    self.bindings = new_dict
 
   def getBinding(self, variable):
     return bindings[variable]
@@ -107,7 +111,7 @@ class Var(object):
     self.isVar = True
 
 class Value(object):
-  def __init__(self, value, intHuh):
-    self.value  = value
+  def __init__(self, val, intHuh):
+    self.value  = val
     self.isInt  = intHuh
     self.isAddr = not intHuh

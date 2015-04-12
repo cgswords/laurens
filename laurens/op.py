@@ -13,3 +13,15 @@ class Enter(object):
   def __init__(self,addr):
     self.op     = EnterOp
     self.target = addr
+
+class ReturnCon(object):
+  def __init__(self,constr,args):
+    self.op          = ReturnConOp
+    self.constructor = constr
+    self.rands       = args
+
+class ReturnInt(object):
+  def __init__(self,val):
+    self.op    = ReturnIntOp
+    self.value = val
+
