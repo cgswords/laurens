@@ -102,14 +102,20 @@ def loop(code, heap, global_env):
       code = op.Eval(code.case_expr,code.env.copy())
 
     elif expr_type is ast.ast.Constr:
-      constr = ce
+      constr    = ce
       local_env = code.env.copy()
 
       code = op.ReturnCon(constr.constructor, 
                           dict(zip(constr.rands,
                                    val(local_env, global_env, constr.rands))))
-
+    
     # TODO: Implement Primitive Operators for Primitive Values.
+    elif expr_type is ast.ast.PrimOp:
+      primop    = ce
+      local_env = code.env.copy()
+
+      #if   primop == '+':
+      #elif primop == '*':
 
   elif code.op == op.EnterOp:
     closure = heap.lookup(code.target)
@@ -168,13 +174,20 @@ def constr_case_lookup(constr,ret_alts):
   # This signals we need to deal with the default case.
   return (True, ret.alts.default.rhs, ret.alts.default.binder) 
 
-def run(fp):
-    program_contents = ""
-    while True:
-        read = os.read(fp, 4096)
-        if len(read) == 0:
-            break
-        program_contents += read
-    os.close(fp)
+def parse(program_contents):
+  
+
+def run(program_contents):
     program, heap, global_env = parse(program_contents)
     loop(program, heap, global_env)
+
+# def run(fp):
+#     program_contents = ""
+#     while True:
+#         read = os.read(fp, 4096)
+#         if len(read) == 0:
+#             break
+#         program_contents += read
+#     os.close(fp)
+#     program, heap, global_env = parse(program_contents)
+#     loop(program, heap, global_env)
