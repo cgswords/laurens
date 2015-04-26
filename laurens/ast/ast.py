@@ -25,6 +25,19 @@ class Lambda(object):
     self.update = update
     self.expr   = expr
 
+  def __str__(self):
+    res  = "Lambda"
+    res += "\n - free: "
+    res += str(self.frees)
+    res += " | updt: "
+    res += str(self.update)
+    res += "\n - args: "
+    res += str(self.args)
+    res += "\n - expr: "
+    res += str(self.expr)
+    return res
+  
+
 class Let(object):
   def __init__(self, bindings, expr):
     self.bindings = bindings
@@ -44,6 +57,14 @@ class App(object):
   def __init__(self, var, atoms):
     self.rator = var
     self.rands = atoms
+ 
+  def __str__(self):
+    res  = "App"
+    res += "\n - rator: "
+    res += str(self.rator)
+    res += " | rands: "
+    res += str(self.rands)
+    return res
 
 class Constr(object):
   def __init__(self, constr, atoms):
@@ -69,7 +90,7 @@ class AlgAlt(object):
   def __init__(self, constr, variables, expr):
     self.constructor = constr
     self.pat_vars    = variables
-    slef.rhs         = expr
+    self.rhs         = expr
 
 class LitAlt(object):
   def __init__(self, prim, expr):
@@ -81,10 +102,9 @@ class DefaultAlt(object):
     self.binder = var
     self.rhs    = expr
 
-class PrimOp(object):
-  def __init__(self, op):
-    self.primop = op
-
+# class PrimOp(object):
+#   def __init__(self, op):
+#     self.primop = op
 ## I'm using Python built-in lists for this so I don't need these.
 # class VarList(object):
 #   def __init__(self, variables):
@@ -97,21 +117,50 @@ class PrimOp(object):
 class Atom(object):
   def __init__(self, value, varHuh):
     self.value = value
-    slef.isVar = varHuh
+    self.isVar = varHuh
     self.isLit = not varHuh
+
+  def __str__(self):
+    res  = "Atom"
+    res += "\n - value: "
+    res += str(self.value)
+    res += " | Lit?: "
+    res += str(self.isLit)
+    return res
 
 class Lit(object):
   def __init__(self, val):
     self.value  = val
     self.isLit = True
 
+  def __str__(self):
+    res  = "Lit> "
+    res += " - value: "
+    res += str(self.value)
+    return res
+
 class Var(object):
   def __init__(self, name):
     self.variable = name
     self.isVar = True
+
+  def __str__(self):
+    res  = "Var"
+    res += " - variable: "
+    res += str(self.variable)
+    return res
+
 
 class Value(object):
   def __init__(self, val, intHuh):
     self.value  = val
     self.isInt  = intHuh
     self.isAddr = not intHuh
+
+  def __str__(self):
+    res  = "Value> "
+    res += " - value: "
+    res += str(self.value)
+    res += " | Int?: "
+    res += str(self.isInt)
+    return res

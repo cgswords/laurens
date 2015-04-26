@@ -25,3 +25,15 @@ class ReturnInt(object):
     self.op    = ReturnIntOp
     self.value = val
 
+
+def lookup_op(op):
+  if (op == EvalOp):
+    return "Eval"
+  elif (op == EnterOp):
+    return "Enter"
+  elif (op == ReturnConOp):
+    return "ReturnCon"
+  elif (op == ReturnIntOp):
+    return "ReturnInt"
+  else:
+      return "Unidentified operation."
