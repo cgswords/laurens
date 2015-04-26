@@ -23,6 +23,9 @@ class Stack(object):
   def __len__(self):
     return len(self.internal)
 
+  def __str__(self):
+    return "Stack - " + str(self.internal)
+
 ## from collections import deque
 ## 
 ## class Stack(object):
