@@ -23,7 +23,8 @@ def get_location(code):
     return "%s" % ( code )
 
 jitdriver = JitDriver(greens=['code']
-                     , reds=['arg_stack', 'ret_stack', 'upd_stack', 'heap', 'global_env']
+                     #, reds=['config','arg_stack', 'ret_stack', 'upd_stack', 'heap', 'global_env']
+                     , reds='auto'
                      , get_printable_location=get_location)
 
 def terminateHuh(config):
@@ -34,22 +35,24 @@ def terminateHuh(config):
 def loop(config):
 
   while not terminateHuh(config):
-    jitdriver.jit_merge_point( code       = config.code
-                             , arg_stack  = config.arg_stack 
-                             , ret_stack  = config.ret_stack 
-                             , upd_stack  = config.upd_stack 
-                             , heap       = config.heap
-                             , global_env = config.global_env)
+    jitdriver.jit_merge_point( code       = config.code)
+                            #, config     = config
+                            #, arg_stack  = config.arg_stack 
+                            #, ret_stack  = config.ret_stack 
+                            #, upd_stack  = config.upd_stack 
+                            #, heap       = config.heap
+                            #, global_env = config.global_env)
     debug("-------------")
     debug(str(config))
     config = config.code.step(config)
 
-    jitdriver.can_enter_jit(code=config.code
-                           , arg_stack  = config.arg_stack 
-                           , ret_stack  = config.ret_stack 
-                           , upd_stack  = config.upd_stack 
-                           , heap       = config.heap
-                           , global_env = config.global_env)   
+    #jitdriver.can_enter_jit(code=config.code)
+    #                       , config     = config
+    #                       , arg_stack  = config.arg_stack 
+    #                       , ret_stack  = config.ret_stack 
+    #                       , upd_stack  = config.upd_stack 
+    #                       , heap       = config.heap
+    #                       , global_env = config.global_env)   
   return config
 
 def run(fp):
