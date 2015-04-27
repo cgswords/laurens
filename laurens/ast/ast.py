@@ -1,9 +1,14 @@
 from collections import deque
 
 class AST(object):
+  _attrs_ = []
   def __init__(self):
     raise Exception('Cannot instantiate')
 
+class ValAST(AST):
+  _attrs_ = ['value']
+  def __init__(self):
+    raise Exception('Cannot instantiate')
 
 class Program(object):
   def __init__(self, binds):
@@ -124,7 +129,7 @@ class DefaultAlt(AST):
 #   def __init__(self, atoms):
 #     self.atoms = atoms
 
-class Atom(AST):
+class Atom(ValAST):
   _attrs_ = ['value', 'isVar', 'isLit']
 
   def __init__(self, value, varHuh):
@@ -140,7 +145,7 @@ class Atom(AST):
     res += str(self.isLit)
     return res
 
-class Lit(AST):
+class Lit(ValAST):
   def __init__(self, val):
     self.value  = val
     self.isLit = True
@@ -162,7 +167,7 @@ class Var(AST):
     res += str(self.variable)
     return res
 
-class Value(AST):
+class Value(ValAST):
   def __init__(self, val, intHuh):
     self.value  = val
     self.isInt  = intHuh

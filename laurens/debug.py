@@ -1,4 +1,12 @@
+
+debugPrint = False
+
 def logMsg(msg, obj):
-  msg += obj
-  print(msg)
+  if debugPrint:
+    msg += obj
+    print(msg)
+
+def debug(msg):
+  if debugPrint:
+    print(msg)
 

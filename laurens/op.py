@@ -5,7 +5,7 @@ import ast.ast
 import ast.cont
 import op
 
-from debug         import logMsg
+from debug         import logMsg, debug
 from parse         import parse
 from data.closure  import Closure
 from data.stack    import Stack
@@ -30,25 +30,28 @@ def vals(env, global_env, k):
 @purefunction
 def val(env, global_env, k):
   logMsg("Val with ", str(k))
+  res = k
   if type(k) is ast.ast.Lit:
-    return ast.ast.Value(k.value, True)
+    res = ast.ast.Value(k.value, True)
   elif type(k) is ast.ast.Var:
     var = k.variable
     if var in env:
-      return env[var]
+      res = env[var]
     elif var in global_env:
-      return global_env[var]
+      res = global_env[var]
   elif type(k) is ast.ast.Atom:
     litHuh = k.isLit
     if litHuh:
-     return ast.ast.Value(k.value, True)
+      res = ast.ast.Value(k.value, True)
     elif k.value in env:
-      return env[k.value]
+      res = env[k.value]
     else:
-      return global_env[k.value]
-  else:
-    return k
+      res = global_env[k.value]
 
+  assert isinstance(res,ast.ast.ValAST)
+  return res 
+
+@purefunction
 def lookup_op(op):
   if (op == EvalOp):
     return "Eval"
@@ -87,7 +90,7 @@ class Eval(Op):
     expr_type  = type(cexp)
 
     if expr_type is ast.ast.App:
-      print("=> App")
+      debug("=> App")
       lookup   = val(cenv, global_env, cexp.rator)
       lookupTy = type(lookup)
       logMsg("Lookup", str(lookup))
@@ -100,7 +103,7 @@ class Eval(Op):
           arg_stack.extend(lookup_rands)
           
           config.code = op.Enter(lookup.value)
-          print(arg_stack.peek())
+          debug(str(arg_stack.peek()))
         
         elif lookup.isInt and cexp.rands == []:
           config.code = op.ReturnInt(lookup.value)
@@ -112,7 +115,7 @@ class Eval(Op):
           raise Exception('operator wasn not a value', cexp.rator, lookup)
 
     # elif expr_type is ast.ast.Let:
-    #   print("=> Let")
+    #   debug("=> Let")
     #   let       = cexp
     #   local_env = cenv.copy()
     #   for var in let.bindings:
@@ -125,7 +128,7 @@ class Eval(Op):
     #   config.code = op.Eval(code.expr.body,local_env)
 
     # elif expr_type is ast.ast.Letrec:
-    #   print("=> Letrec")
+    #   debug("=> Letrec")
     #   letrec    = cexp
     #   local_env = code.env.copy()
     #   for var in letrec.bindings: # Build the addresses for the new bindings
@@ -141,15 +144,15 @@ class Eval(Op):
     #   config.code = op.Eval(cexp.body,local_env)
 
     elif expr_type is ast.ast.Case:
-      print("=> Case")
+      debug("=> Case")
       case      = cexp
-      local_env = code.env.copy()
+      local_env = cenv.copy()
       config.ret_stack.push(ast.cont.CaseCont(case.alts, local_env))
 
       config.code = op.Eval(case.case_expr, local_env)
 
     elif expr_type is ast.ast.Constr:
-      print("=> Constr")
+      debug("=> Constr")
       constr = cexp
       local_env = cenv.copy()
 
@@ -158,49 +161,57 @@ class Eval(Op):
                                    vals(local_env, global_env, constr.rands))))
 
     elif expr_type is ast.ast.Atom:
-      print("=> Atom")
+      debug("=> Atom")
       if cexp.isLit:
         config.code = op.ReturnInt(cexp.value)
       else:
         config.code = op.ReturnInt(val(cenv, global_env, cexp).value)
 
     elif expr_type is ast.ast.Lit:
-      print("=> Lit")
+      debug("=> Lit")
       config.code = op.ReturnInt(cexp.value)
 
     elif expr_type is ast.ast.Var:
-      print("=> Var")
-      config.code = op.ReturnInt(val(cenv, global_env, cexp).value)
+      debug("=> Var")
+      res = val(cenv, global_env, cexp)
+      assert isinstance(res,ast.ast.ValAST)
+      config.code = op.ReturnInt(res.value)
 
     elif expr_type is ast.ast.PrimOp:
-      print("=> PrimOp")
-      print(cexp.oper)
+      debug("=> PrimOp")
+      debug(str(cexp.oper))
       if cexp.oper == "+": ## From the book: these must already be forced!
-        print("Plus")
+        debug("Plus")
         lookups = vals(code.env, global_env, cexp.atoms)
         x1      = lookups[0]
         x2      = lookups[1]
+        assert isinstance(x1,ast.ast.ValAST)
+        assert isinstance(x2,ast.ast.ValAST)
         res     = x1.value + x2.value
-        print("result")
-        print(res)
+        debug("result")
+        debug(str(res))
         config.code = op.ReturnInt(res) 
 
       elif cexp.oper == "-": ## From the book: these must already be forced!
-        print("Minus")
+        debug("Minus")
         lookups = vals(code.env, global_env, cexp.atoms)
         x1      = lookups[0]
         x2      = lookups[1]
+        assert isinstance(x1,ast.ast.ValAST)
+        assert isinstance(x2,ast.ast.ValAST)
         logMsg("x1: ",str(x1))
         logMsg("x2: ",str(x2))
         res     = x1.value - x2.value
-        print("result")
-        print(res)
+        debug("result")
+        debug(str(res))
         config.code = op.ReturnInt(res) 
 
       elif cexp.oper == "*": ## From the book: these must already be forced!
         lookups     = vals(code.env, global_env, cexp.atoms)
         x1          = lookups[0]
         x2          = lookups[1]
+        assert isinstance(x1,ast.ast.ValAST)
+        assert isinstance(x2,ast.ast.ValAST)
         res         = x1.value * x2.value
         config.code = op.ReturnInt(res)
 
@@ -208,6 +219,8 @@ class Eval(Op):
         lookups = vals(code.env, global_env, cexp.atoms)
         x1      = lookups[0]
         x2      = lookups[1]
+        assert isinstance(x1,ast.ast.ValAST)
+        assert isinstance(x2,ast.ast.ValAST)
         config.code = op.ReturnInt(x1 == x2) 
 
     else:
@@ -254,8 +267,8 @@ class ReturnCon(Op):
     return "Return Constructor - " + str(self.constructor) + str(self.rands)
 
   def step(self, config):
-    if type(config.ret_stack.peek()[1]) is ast.cont.CaseCont:
-      retk              = config.ret_stack.pop()
+    retk = config.ret_stack.pop()
+    if type(retk) is ast.cont.CaseCont:
       ret_env           = retk.env.copy() # Don't need to, but for safety!
       ret_alts          = retk.alts
       constr            = code.constructor
@@ -299,20 +312,20 @@ class ReturnInt(Op):
     return "Return Int - " + str(self.value)
 
   def step(self,config):
-    print("Int return")
-    if type(config.ret_stack.peek()[1]) is ast.cont.CaseCont:
-      retk     = config.ret_stack.pop()
-      ret_env  = retk.env.copy()
-      ret_alts = retk.alts
-      value    = config.code.value
+    debug("Int return")
+    retk      = config.ret_stack.pop()
+    if type(retk) is ast.cont.CaseCont:
+      ret_env   = retk.env.copy()
+      ret_alts  = retk.alts
+      value     = config.code.value
 
       default,default_var,body = self.int_case_lookup(value, ret_alts)
 
       if default:
         if (default_var is not None):
           var = default_var
-          ret_env.update([(var,ast.ast.Value(value, True))])
-          logMsg("New env: ", str(ret_env))
+          ret_env[var] = ast.ast.Value(value, True)
+          # logMsg("New env: ", str(ret_env))
 
       config.code = op.Eval(body, ret_env)
   
@@ -324,5 +337,4 @@ class ReturnInt(Op):
         return (False, None, alt.rhs)
 
     return (True, ret_alts.default.binder, ret_alts.default.rhs)
-
 

@@ -1,11 +1,12 @@
-import ast.ast
+import ast.cont
 
 class RetStack(object):
+  _attrs_ = ['internal']
   def __init__(self):
     self.internal   = []
 
   def push(self,value):
-    return self.internal.append(value)
+    self.internal.append(value)
 
   def extend(self,values):
     if values == []:
@@ -15,11 +16,14 @@ class RetStack(object):
       self.internal.append(v)
 
   def pop(self):
+    if len(self.internal) == 0:
+      return ast.cont.EmptyCont()
     return self.internal.pop()
 
   def peek(self):
     if len(self.internal) == 0:
-      return (False,ast.ast.Lit(0))
+      return (False,ast.cont.EmptyCont())
+    # assert type(self.internal[0]) is ast.cont.CaseCont
     return (True,self.internal[0])
 
   def __len__(self):

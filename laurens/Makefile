@@ -6,4 +6,4 @@ all:
 	$(PYPYPATH)/pypy-c $(PYPYPATH)/rpython/bin/rpython --batch entry_point.py
 
 tests:
-	$(PYPYPATH)/pypy-c $(PYPYPATH)/rpython/bin/rpython --batch tests.py
+	$(PYPYPATH)/pypy-c $(PYPYPATH)/rpython/bin/rpython --batch -Ojit tests.py

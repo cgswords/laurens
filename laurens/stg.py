@@ -9,7 +9,7 @@ import ast.ast
 import ast.cont
 import op
 
-from debug         import logMsg
+from debug         import logMsg, debug
 from parse         import parse
 from data.closure  import Closure
 from data.stack    import Stack
@@ -19,13 +19,12 @@ from data.config   import Config
 
 from rpython.rlib.jit import JitDriver, purefunction
 
-def get_location(code, arg_stack, ret_stack, upd_stack, heap):
-    return "%s_%s_%s" % (
-            code, arg_stack, ret_stack
-            )
+def get_location(code):
+    return "%s" % ( code )
 
-jitdriver = JitDriver(greens=['config'], reds=['global_env'],
-        get_printable_location=get_location)
+jitdriver = JitDriver(greens=['code']
+                     , reds=['arg_stack', 'ret_stack', 'upd_stack', 'heap', 'global_env']
+                     , get_printable_location=get_location)
 
 def terminateHuh(config):
   return (((config.code.op == op.ReturnConOp) or 
@@ -35,10 +34,22 @@ def terminateHuh(config):
 def loop(config):
 
   while not terminateHuh(config):
-    print("-------------")
-    print(str(config))
+    jitdriver.jit_merge_point( code       = config.code
+                             , arg_stack  = config.arg_stack 
+                             , ret_stack  = config.ret_stack 
+                             , upd_stack  = config.upd_stack 
+                             , heap       = config.heap
+                             , global_env = config.global_env)
+    debug("-------------")
+    debug(str(config))
     config = config.code.step(config)
 
+    jitdriver.can_enter_jit(code=config.code
+                           , arg_stack  = config.arg_stack 
+                           , ret_stack  = config.ret_stack 
+                           , upd_stack  = config.upd_stack 
+                           , heap       = config.heap
+                           , global_env = config.global_env)   
   return config
 
 def run(fp):
@@ -62,10 +73,10 @@ def mtclos(args, body):
 def test(main,heap,test_name):
   main_addr  = heap.new_addr()
   heap.set_addr(main_addr,main)
-  print("------------------------------------------------")
-  print(test_name)
+  debug("------------------------------------------------")
+  debug(test_name)
   code   = op.Eval(ast.ast.App(ast.ast.Var("main"), []), {})
   answer = loop(Config(code, Stack(), Stack(), Stack(), heap, {"main":ast.ast.Value(main_addr,False)}))
-  print(str(answer))
+  debug(str(answer))
 
 
