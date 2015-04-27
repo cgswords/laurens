@@ -72,8 +72,7 @@ class Eval(Op):
     self.env  = env
   
   def __str__(self):
-    return "Expr - " + str(self.expr) + "\n  Env - " + str(env)
-
+    return "\n\tExpr - " + str(self.expr) + "\n\tEnv - " + str(self.env)
 
   def step(self,config):
     code       = config.code
@@ -145,9 +144,9 @@ class Eval(Op):
       print("=> Case")
       case      = cexp
       local_env = code.env.copy()
-      config.ret_stack.push(ast.cont.CaseCont(case.alts, code.env.copy()))
+      config.ret_stack.push(ast.cont.CaseCont(case.alts, local_env))
 
-      config.code = op.Eval(code.case_expr,code.env.copy())
+      config.code = op.Eval(case.case_expr, local_env)
 
     elif expr_type is ast.ast.Constr:
       print("=> Constr")
@@ -162,10 +161,16 @@ class Eval(Op):
       print("=> Atom")
       if cexp.isLit:
         config.code = op.ReturnInt(cexp.value)
+      else:
+        config.code = op.ReturnInt(val(cenv, global_env, cexp).value)
 
     elif expr_type is ast.ast.Lit:
       print("=> Lit")
       config.code = op.ReturnInt(cexp.value)
+
+    elif expr_type is ast.ast.Var:
+      print("=> Var")
+      config.code = op.ReturnInt(val(cenv, global_env, cexp).value)
 
     elif expr_type is ast.ast.PrimOp:
       print("=> PrimOp")
@@ -181,16 +186,23 @@ class Eval(Op):
         config.code = op.ReturnInt(res) 
 
       elif cexp.oper == "-": ## From the book: these must already be forced!
+        print("Minus")
         lookups = vals(code.env, global_env, cexp.atoms)
         x1      = lookups[0]
         x2      = lookups[1]
-        config.code = op.ReturnInt(x1 - x2) 
+        logMsg("x1: ",str(x1))
+        logMsg("x2: ",str(x2))
+        res     = x1.value - x2.value
+        print("result")
+        print(res)
+        config.code = op.ReturnInt(res) 
 
       elif cexp.oper == "*": ## From the book: these must already be forced!
-        lookups = vals(code.env, global_env, cexp.atoms)
-        x1      = lookups[0]
-        x2      = lookups[1]
-        config.code = op.ReturnInt(x1 * x2) 
+        lookups     = vals(code.env, global_env, cexp.atoms)
+        x1          = lookups[0]
+        x2          = lookups[1]
+        res         = x1.value * x2.value
+        config.code = op.ReturnInt(res)
 
       elif cexp.oper == "=": ## From the book: these must already be forced!
         lookups = vals(code.env, global_env, cexp.atoms)
@@ -294,20 +306,23 @@ class ReturnInt(Op):
       ret_alts = retk.alts
       value    = config.code.value
 
-      default,body = self.int_case_lookup(value, ret_alts)
+      default,default_var,body = self.int_case_lookup(value, ret_alts)
 
       if default:
-        if (default.binder is not None):
-          var = default.binder
-          ret_env.update([(var,value)])
+        if (default_var is not None):
+          var = default_var
+          ret_env.update([(var,ast.ast.Value(value, True))])
+          logMsg("New env: ", str(ret_env))
 
-      code = op.Eval(body, ret_env)
+      config.code = op.Eval(body, ret_env)
+  
+    return config
 
   def int_case_lookup(self,val,ret_alts):
     for alt in ret_alts.alternates: # Assuming everything is a LitAlt
       if alt.literal == val:
-        return (False, alt.rhs)
+        return (False, None, alt.rhs)
 
-    return (True, ret.alts.default)
+    return (True, ret_alts.default.binder, ret_alts.default.rhs)
 
 

@@ -31,14 +31,14 @@ class Lambda(AST):
     self.expr   = expr
 
   def __str__(self):
-    res  = "Lambda"
-    res += "\n - free: "
+    res  = "\tLambda"
+    res += "\n\t - free: "
     res += str(self.frees)
     res += " | updt: "
     res += str(self.update)
-    res += "\n - args: "
+    res += "\n\t - args: "
     res += str(self.args)
-    res += "\n - expr: "
+    res += "\n\t - expr: "
     res += str(self.expr)
     return res
   
@@ -83,6 +83,7 @@ class PrimOp(AST):
     self.oper  = op
     self.atoms = atoms
 
+## I must use these instead of lists to preserve the default case
 class AlgAlts(AST):
   def __init__(self, alts, default):
     self.alternates = alts
@@ -112,6 +113,8 @@ class DefaultAlt(AST):
 # class PrimOp(object):
 #   def __init__(self, op):
 #     self.primop = op
+
+#
 ## I'm using Python built-in lists for this so I don't need these.
 # class VarList(object):
 #   def __init__(self, variables):

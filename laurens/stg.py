@@ -35,9 +35,8 @@ def terminateHuh(config):
 def loop(config):
 
   while not terminateHuh(config):
-    print("-----------")
-    logMsg("Loop with oper: ", str(op.lookup_op(config.code.op)))
-    logMsg(">> Return Stack: ", str(config.ret_stack.peek()))
+    print("-------------")
+    print(str(config))
     config = config.code.step(config)
 
   return config
