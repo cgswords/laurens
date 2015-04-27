@@ -1,5 +1,10 @@
 from collections import deque
 
+class AST(object):
+  def __init__(self):
+    raise Exception('Cannot instantiate')
+
+
 class Program(object):
   def __init__(self, binds):
     self.binds = binds
@@ -18,7 +23,7 @@ class Bindings(object):
   def getBinding(self, variable):
     return bindings[variable]
 
-class Lambda(object):
+class Lambda(AST):
   def __init__(self, varsf, varsa, update, expr):
     self.frees  = varsf
     self.args   = varsa
@@ -38,22 +43,22 @@ class Lambda(object):
     return res
   
 
-class Let(object):
+class Let(AST):
   def __init__(self, bindings, expr):
     self.bindings = bindings
     self.body     = expr
 
-class Letrec(object):    
+class Letrec(AST):    
   def __init__(self, bindings, expr):
     self.bindings = bindings
     self.body     = expr
 
-class Case(object):
+class Case(AST):
   def __init__(self, expr, alts):
     self.case_expr = expr
     self.alts      = alts
 
-class App(object):
+class App(AST):
   def __init__(self, var, atoms):
     self.rator = var
     self.rands = atoms
@@ -66,38 +71,38 @@ class App(object):
     res += str(self.rands)
     return res
 
-class Constr(object):
+class Constr(AST):
   def __init__(self, constr, atoms):
     self.constructor = constr
     self.rands       = atoms
 
-class PrimOp(object):
+class PrimOp(AST):
   def __init__(self, op, atoms):
     self.oper  = op
     self.atoms = atoms
 
-class AlgAlts(object):
+class AlgAlts(AST):
   def __init__(self, alts, default):
     self.alternates = alts
     self.default    = default
 
-class PrimAlts(object):
+class PrimAlts(AST):
   def __init__(self, alts, default):
     self.alternates = alts
     self.default    = default
 
-class AlgAlt(object):
+class AlgAlt(AST):
   def __init__(self, constr, variables, expr):
     self.constructor = constr
     self.pat_vars    = variables
     self.rhs         = expr
 
-class LitAlt(object):
+class LitAlt(AST):
   def __init__(self, prim, expr):
     self.literal   = prim
     self.rhs       = expr
 
-class DefaultAlt(object):
+class DefaultAlt(AST):
   def __init__(self, var, expr):
     self.binder = var
     self.rhs    = expr
@@ -114,7 +119,7 @@ class DefaultAlt(object):
 #   def __init__(self, atoms):
 #     self.atoms = atoms
 
-class Atom(object):
+class Atom(AST):
   def __init__(self, value, varHuh):
     self.value = value
     self.isVar = varHuh
@@ -128,7 +133,7 @@ class Atom(object):
     res += str(self.isLit)
     return res
 
-class Lit(object):
+class Lit(AST):
   def __init__(self, val):
     self.value  = val
     self.isLit = True
@@ -139,7 +144,7 @@ class Lit(object):
     res += str(self.value)
     return res
 
-class Var(object):
+class Var(AST):
   def __init__(self, name):
     self.variable = name
     self.isVar = True
@@ -150,8 +155,7 @@ class Var(object):
     res += str(self.variable)
     return res
 
-
-class Value(object):
+class Value(AST):
   def __init__(self, val, intHuh):
     self.value  = val
     self.isInt  = intHuh

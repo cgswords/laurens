@@ -9,12 +9,13 @@ import ast.ast
 import ast.cont
 import op
 
-from debug        import logMsg
-from parse        import parse
-from data.closure import Closure
-from data.stack   import Stack
-from data.heap    import Heap
-from data.config  import Config
+from debug         import logMsg
+from parse         import parse
+from data.closure  import Closure
+from data.stack    import Stack
+from data.retstack import RetStack
+from data.heap     import Heap
+from data.config   import Config
 
 from rpython.rlib.jit import JitDriver, purefunction
 
@@ -35,8 +36,8 @@ def loop(config):
 
   while not terminateHuh(config):
     print("-----------")
-    logMsg("Loop with oper: ", op.lookup_op(config.code.op))
-    logMsg(">> Return Stack: ", config.ret_stack.peek())
+    logMsg("Loop with oper: ", str(op.lookup_op(config.code.op)))
+    logMsg(">> Return Stack: ", str(config.ret_stack.peek()))
     config = config.code.step(config)
 
   return config
@@ -67,31 +68,5 @@ def test(main,heap,test_name):
   code   = op.Eval(ast.ast.App(ast.ast.Var("main"), []), {})
   answer = loop(Config(code, Stack(), Stack(), Stack(), heap, {"main":ast.ast.Value(main_addr,False)}))
   print(str(answer))
-
-lit3      = ast.ast.Lit(3)
-lit5      = ast.ast.Lit(5)
-plus      = ast.ast.PrimOp("+",[lit3,lit5])
-main      = Closure(ast.ast.Lambda([],[],False,plus),[])
-test(main,Heap(),"Test 1")
-
-main2     = mtclos([],plus)
-test(main2,Heap(),"Test 2")
-
-test3heap = Heap()
-idclos    = mtclos(["x"],ast.ast.App(ast.ast.Var("x"),[]))
-idaddr    = test3heap.new_addr()
-test3heap.set_addr(idaddr,idclos)
-test3     = ast.ast.App(ast.ast.Value(idaddr,False),[lit3])
-main3     = mtclos([],test3)
-test(main3,test3heap,"Test 3")
-
-test4heap = Heap()
-idclos    = mtclos(["x"],ast.ast.PrimOp("+",[ast.ast.Var("x"),lit5]))
-idaddr    = test4heap.new_addr()
-test4heap.set_addr(idaddr,idclos)
-test4     = ast.ast.App(ast.ast.Value(idaddr,False),[lit3])
-main4     = mtclos([],test4)
-test(main4,test4heap,"Test 4")
-
 
 

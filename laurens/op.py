@@ -5,12 +5,13 @@ import ast.ast
 import ast.cont
 import op
 
-from debug        import logMsg
-from parse        import parse
-from data.closure import Closure
-from data.stack   import Stack
-from data.heap    import Heap
-from data.config  import Config
+from debug         import logMsg
+from parse         import parse
+from data.closure  import Closure
+from data.stack    import Stack
+from data.retstack import RetStack
+from data.heap     import Heap
+from data.config   import Config
 
 from rpython.rlib.jit import purefunction
 
@@ -20,13 +21,16 @@ ReturnConOp = 2
 ReturnIntOp = 3
 
 @purefunction
+def vals(env, global_env, k):
+  logMsg("Vals with ", str(k))
+  if k == []:
+    return []
+  return [val(env, global_env, v) for v in k] # map(lambda v : val(env, global_env, v), k)
+
+@purefunction
 def val(env, global_env, k):
-  logMsg("Val with ", k)
-  if isinstance(k, list):
-    if k == []:
-      return []
-    return [val(env, global_env, v) for v in k] # map(lambda v : val(env, global_env, v), k)
-  elif type(k) is ast.ast.Atom:
+  logMsg("Val with ", str(k))
+  if type(k) is ast.ast.Atom:
     if k.isLit:
      return ast.ast.Value(k.value, True)
     elif k.value in env:
@@ -56,7 +60,11 @@ def lookup_op(op):
   else:
       return "Unidentified operation."
 
-class Eval(object):
+class Op(object):
+  def __init__(self):
+    raise Exception('Cannot instantiate')
+
+class Eval(Op):
   def __init__(self,expr,env):
     self.op   = EvalOp
     self.expr = expr
@@ -72,6 +80,7 @@ class Eval(object):
     ret_stack  = config.ret_stack
     upd_stack  = config.upd_stack
     global_env = config.global_env
+    heap       = config.heap
 
     cexp       = code.expr
     cenv       = code.env
@@ -81,13 +90,13 @@ class Eval(object):
       print("=> App")
       lookup   = val(cenv, global_env, cexp.rator)
       lookupTy = type(lookup)
-      logMsg("Lookup",lookup)
+      logMsg("Lookup", str(lookup))
       if lookupTy is ast.ast.Value:
         if lookup.isAddr:
-          logMsg("Rands", cexp.rands)
-          lookup_rands = val(cenv, global_env, cexp.rands)
+          logMsg("Rands", str(cexp.rands))
+          lookup_rands = vals(cenv, global_env, cexp.rands)
 
-          logMsg("Looked up", cexp.rands)
+          logMsg("Looked up", str(lookup_rands))
           arg_stack.extend(lookup_rands)
           
           config.code = op.Enter(lookup.value)
@@ -109,7 +118,7 @@ class Eval(object):
       for var in let.bindings:
         lam            = cexp.bindings[var]
         addr           = heap.new_addr()
-        clos           = Closure(lam, val(cenv,  global_env,  lam.frees))
+        clos           = Closure(lam, vals(cenv,  global_env,  lam.frees))
         local_env[var] = ast.ast.Value(addr,False)
         heap.set_addr(addr, clos)
 
@@ -117,7 +126,7 @@ class Eval(object):
 
     elif expr_type is ast.ast.Letrec:
       print("=> Letrec")
-      letrec    = ce
+      letrec    = cexp
       local_env = code.env.copy()
       for var in letrec.bindings: # Build the addresses for the new bindings
         addr           = heap.new_addr()
@@ -126,7 +135,7 @@ class Eval(object):
       for var in letrec.bindings: # Build the closures using the new binding.
         lam  = cexp.bindings[var]
         addr = local_env[var].value
-        clos = Closure(lam, val(local_env,  global_env,  lam.frees))
+        clos = Closure(lam, vals(local_env,  global_env,  lam.frees))
         heap.set_addr(addr, clos)
 
       config.code = op.Eval(cexp.body,local_env)
@@ -135,7 +144,7 @@ class Eval(object):
       print("=> Case")
       case      = cexp
       local_env = code.env.copy()
-      config.ret_stack.push(ast.cont.CaseCont(case.alts,code.env.copy()))
+      config.ret_stack.push(ast.cont.CaseCont(case.alts, code.env.copy()))
 
       config.code = op.Eval(code.case_expr,code.env.copy())
 
@@ -146,7 +155,7 @@ class Eval(object):
 
       config.code = op.ReturnCon(constr.constructor, 
                           dict(zip(constr.rands,
-                                   val(local_env, global_env, constr.rands))))
+                                   vals(local_env, global_env, constr.rands))))
 
     elif expr_type is ast.ast.Atom:
       print("=> Atom")
@@ -162,7 +171,7 @@ class Eval(object):
       print(cexp.oper)
       if cexp.oper == "+": ## From the book: these must already be forced!
         print("Plus")
-        lookups = val(code.env, global_env, cexp.atoms)
+        lookups = vals(code.env, global_env, cexp.atoms)
         x1      = lookups[0]
         x2      = lookups[1]
         res     = x1.value + x2.value
@@ -171,29 +180,29 @@ class Eval(object):
         config.code = op.ReturnInt(res) 
 
       elif cexp.oper == "-": ## From the book: these must already be forced!
-        lookups = val(code.env, global_env, cexp.rator)
+        lookups = vals(code.env, global_env, cexp.atoms)
         x1      = lookups[0]
         x2      = lookups[1]
         config.code = op.ReturnInt(x1 - x2) 
 
       elif cexp.oper == "*": ## From the book: these must already be forced!
-        lookups = val(code.env, global_env, cexp.rator)
+        lookups = vals(code.env, global_env, cexp.atoms)
         x1      = lookups[0]
         x2      = lookups[1]
         config.code = op.ReturnInt(x1 * x2) 
 
       elif cexp.oper == "=": ## From the book: these must already be forced!
-        lookups = val(code.env, global_env, cexp.rator)
+        lookups = vals(code.env, global_env, cexp.atoms)
         x1      = lookups[0]
         x2      = lookups[1]
         config.code = op.ReturnInt(x1 == x2) 
 
     else:
-      logMsg("Current operator: ", cexp)
+      logMsg("Current operator: ", str(cexp))
 
     return config
 
-class Enter(object):
+class Enter(Op):
   def __init__(self,addr):
     self.op     = EnterOp
     self.target = addr
@@ -206,7 +215,7 @@ class Enter(object):
     lf      = closure.lam
     frees   = closure.frees
     
-    logMsg("Entering lambda: ",lf)
+    logMsg("Entering lambda: ", str(lf))
 
     if lf.update == True:
        return 0
@@ -222,7 +231,7 @@ class Enter(object):
 
     return config
 
-class ReturnCon(object):
+class ReturnCon(Op):
   def __init__(self,constr,args):
     self.op          = ReturnConOp
     self.constructor = constr
@@ -232,7 +241,7 @@ class ReturnCon(object):
     return "Return Constructor - " + str(self.constructor) + str(self.rands)
 
   def step(self, config):
-    if type(config.ret_stack.peek()) is ast.cont.CaseCont:
+    if type(config.ret_stack.peek()[1]) is ast.cont.CaseCont:
       retk              = config.ret_stack.pop()
       ret_env           = retk.env.copy() # Don't need to, but for safety!
       ret_alts          = retk.alts
@@ -268,7 +277,7 @@ class ReturnCon(object):
     # This signals we need to deal with the default case.
     return (True, ret.alts.default.rhs, ret.alts.default.binder) 
 
-class ReturnInt(object):
+class ReturnInt(Op):
   def __init__(self,val):
     self.op    = ReturnIntOp
     self.value = val
@@ -278,13 +287,13 @@ class ReturnInt(object):
 
   def step(self,config):
     print("Int return")
-    if type(config.ret_stack.peek()) is ast.cont.CaseCont:
+    if type(config.ret_stack.peek()[1]) is ast.cont.CaseCont:
       retk     = config.ret_stack.pop()
       ret_env  = retk.env.copy()
       ret_alts = retk.alts
-      value    = code.value
+      value    = config.code.value
 
-      default,body = self.int_case_lookup(constr, ret_alts)
+      default,body = self.int_case_lookup(value, ret_alts)
 
       if default:
         if (default.binder is not None):

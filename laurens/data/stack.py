@@ -1,3 +1,5 @@
+import ast.ast
+
 class Stack(object):
   def __init__(self):
     self.internal   = []
@@ -7,7 +9,7 @@ class Stack(object):
 
   def extend(self,values):
     if values == []:
-        return 0
+        return None
     values.reverse()
     for v in values:
       self.internal.append(v)
@@ -17,8 +19,8 @@ class Stack(object):
 
   def peek(self):
     if len(self.internal) == 0:
-      return "Empty"
-    return self.internal[0]
+      return (False,ast.ast.Lit(0))
+    return (True,self.internal[0])
 
   def __len__(self):
     return len(self.internal)
