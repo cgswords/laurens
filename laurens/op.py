@@ -30,14 +30,7 @@ def vals(env, global_env, k):
 @purefunction
 def val(env, global_env, k):
   logMsg("Val with ", str(k))
-  if type(k) is ast.ast.Atom:
-    if k.isLit:
-     return ast.ast.Value(k.value, True)
-    elif k.value in env:
-      return env[k.value]
-    else:
-      return global_env[k.value]
-  elif type(k) is ast.ast.Lit:
+  if type(k) is ast.ast.Lit:
     return ast.ast.Value(k.value, True)
   elif type(k) is ast.ast.Var:
     var = k.variable
@@ -45,6 +38,14 @@ def val(env, global_env, k):
       return env[var]
     elif var in global_env:
       return global_env[var]
+# elif type(k) is ast.ast.Atom:
+#   litHuh = k.isLit
+#   if litHuh:
+#    return ast.ast.Value(k.value, True)
+#   elif k.value in env:
+#     return env[k.value]
+#   else:
+#     return global_env[k.value]
   else:
     return k
 
@@ -111,56 +112,56 @@ class Eval(Op):
       else:
           raise Exception('operator wasn not a value', cexp.rator, lookup)
 
-    elif expr_type is ast.ast.Let:
-      print("=> Let")
-      let       = cexp
-      local_env = cenv.copy()
-      for var in let.bindings:
-        lam            = cexp.bindings[var]
-        addr           = heap.new_addr()
-        clos           = Closure(lam, vals(cenv,  global_env,  lam.frees))
-        local_env[var] = ast.ast.Value(addr,False)
-        heap.set_addr(addr, clos)
+    # elif expr_type is ast.ast.Let:
+    #   print("=> Let")
+    #   let       = cexp
+    #   local_env = cenv.copy()
+    #   for var in let.bindings:
+    #     lam            = cexp.bindings[var]
+    #     addr           = heap.new_addr()
+    #     clos           = Closure(lam, vals(cenv,  global_env,  lam.frees))
+    #     local_env[var] = ast.ast.Value(addr,False)
+    #     heap.set_addr(addr, clos)
 
-      config.code = op.Eval(code.expr.body,local_env)
+    #   config.code = op.Eval(code.expr.body,local_env)
 
-    elif expr_type is ast.ast.Letrec:
-      print("=> Letrec")
-      letrec    = cexp
-      local_env = code.env.copy()
-      for var in letrec.bindings: # Build the addresses for the new bindings
-        addr           = heap.new_addr()
-        local_env[var] = ast.ast.Value(addr,False)
+    # elif expr_type is ast.ast.Letrec:
+    #   print("=> Letrec")
+    #   letrec    = cexp
+    #   local_env = code.env.copy()
+    #   for var in letrec.bindings: # Build the addresses for the new bindings
+    #     addr           = heap.new_addr()
+    #     local_env[var] = ast.ast.Value(addr,False)
 
-      for var in letrec.bindings: # Build the closures using the new binding.
-        lam  = cexp.bindings[var]
-        addr = local_env[var].value
-        clos = Closure(lam, vals(local_env,  global_env,  lam.frees))
-        heap.set_addr(addr, clos)
+    #   for var in letrec.bindings: # Build the closures using the new binding.
+    #     lam  = cexp.bindings[var]
+    #     addr = local_env[var].value
+    #     clos = Closure(lam, vals(local_env,  global_env,  lam.frees))
+    #     heap.set_addr(addr, clos)
 
-      config.code = op.Eval(cexp.body,local_env)
+    #   config.code = op.Eval(cexp.body,local_env)
 
-    elif expr_type is ast.ast.Case:
-      print("=> Case")
-      case      = cexp
-      local_env = code.env.copy()
-      config.ret_stack.push(ast.cont.CaseCont(case.alts, code.env.copy()))
+    # elif expr_type is ast.ast.Case:
+    #   print("=> Case")
+    #   case      = cexp
+    #   local_env = code.env.copy()
+    #   config.ret_stack.push(ast.cont.CaseCont(case.alts, code.env.copy()))
 
-      config.code = op.Eval(code.case_expr,code.env.copy())
+    #   config.code = op.Eval(code.case_expr,code.env.copy())
 
-    elif expr_type is ast.ast.Constr:
-      print("=> Constr")
-      constr = cexp
-      local_env = cenv.copy()
+    # elif expr_type is ast.ast.Constr:
+    #   print("=> Constr")
+    #   constr = cexp
+    #   local_env = cenv.copy()
 
-      config.code = op.ReturnCon(constr.constructor, 
-                          dict(zip(constr.rands,
-                                   vals(local_env, global_env, constr.rands))))
+    #   config.code = op.ReturnCon(constr.constructor, 
+    #                       dict(zip(constr.rands,
+    #                                vals(local_env, global_env, constr.rands))))
 
-    elif expr_type is ast.ast.Atom:
-      print("=> Atom")
-      if cexp.isLit:
-        config.code = op.ReturnInt(cexp.value)
+    # elif expr_type is ast.ast.Atom:
+    #   print("=> Atom")
+    #   if cexp.isLit:
+    #     config.code = op.ReturnInt(cexp.value)
 
     elif expr_type is ast.ast.Lit:
       print("=> Lit")
@@ -224,8 +225,8 @@ class Enter(Op):
         local_env = {}
         for var in lf.args:
           local_env[var] = config.arg_stack.pop() # Woohoo destructive!
-        for (i, var) in enumerate(lf.frees):
-          local_env[var] = frees[i] 
+        for i in range(len(lf.frees)): 
+          local_env[lf.frees[i]] = frees[i] 
       
         config.code = op.Eval(lf.expr, local_env)
 

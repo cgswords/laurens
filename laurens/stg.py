@@ -30,7 +30,7 @@ jitdriver = JitDriver(greens=['config'], reds=['global_env'],
 def terminateHuh(config):
   return (((config.code.op == op.ReturnConOp) or 
            (config.code.op == op.ReturnIntOp)) 
-          and (config.ret_stack.peek() == "Empty"))
+          and (not config.ret_stack.peek()[0]))
 
 def loop(config):
 
