@@ -38,14 +38,14 @@ def val(env, global_env, k):
       return env[var]
     elif var in global_env:
       return global_env[var]
-# elif type(k) is ast.ast.Atom:
-#   litHuh = k.isLit
-#   if litHuh:
-#    return ast.ast.Value(k.value, True)
-#   elif k.value in env:
-#     return env[k.value]
-#   else:
-#     return global_env[k.value]
+  elif type(k) is ast.ast.Atom:
+    litHuh = k.isLit
+    if litHuh:
+     return ast.ast.Value(k.value, True)
+    elif k.value in env:
+      return env[k.value]
+    else:
+      return global_env[k.value]
   else:
     return k
 
@@ -141,27 +141,27 @@ class Eval(Op):
 
     #   config.code = op.Eval(cexp.body,local_env)
 
-    # elif expr_type is ast.ast.Case:
-    #   print("=> Case")
-    #   case      = cexp
-    #   local_env = code.env.copy()
-    #   config.ret_stack.push(ast.cont.CaseCont(case.alts, code.env.copy()))
+    elif expr_type is ast.ast.Case:
+      print("=> Case")
+      case      = cexp
+      local_env = code.env.copy()
+      config.ret_stack.push(ast.cont.CaseCont(case.alts, code.env.copy()))
 
-    #   config.code = op.Eval(code.case_expr,code.env.copy())
+      config.code = op.Eval(code.case_expr,code.env.copy())
 
-    # elif expr_type is ast.ast.Constr:
-    #   print("=> Constr")
-    #   constr = cexp
-    #   local_env = cenv.copy()
+    elif expr_type is ast.ast.Constr:
+      print("=> Constr")
+      constr = cexp
+      local_env = cenv.copy()
 
-    #   config.code = op.ReturnCon(constr.constructor, 
-    #                       dict(zip(constr.rands,
-    #                                vals(local_env, global_env, constr.rands))))
+      config.code = op.ReturnCon(constr.constructor, 
+                          dict(zip(constr.rands,
+                                   vals(local_env, global_env, constr.rands))))
 
-    # elif expr_type is ast.ast.Atom:
-    #   print("=> Atom")
-    #   if cexp.isLit:
-    #     config.code = op.ReturnInt(cexp.value)
+    elif expr_type is ast.ast.Atom:
+      print("=> Atom")
+      if cexp.isLit:
+        config.code = op.ReturnInt(cexp.value)
 
     elif expr_type is ast.ast.Lit:
       print("=> Lit")

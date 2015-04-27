@@ -54,6 +54,7 @@ class Letrec(AST):
     self.body     = expr
 
 class Case(AST):
+  _attrs_ = ['case_expr', 'alts']
   def __init__(self, expr, alts):
     self.case_expr = expr
     self.alts      = alts
@@ -72,6 +73,7 @@ class App(AST):
     return res
 
 class Constr(AST):
+  _attrs_ = ['constructor', 'rands']
   def __init__(self, constr, atoms):
     self.constructor = constr
     self.rands       = atoms
@@ -120,6 +122,8 @@ class DefaultAlt(AST):
 #     self.atoms = atoms
 
 class Atom(AST):
+  _attrs_ = ['value', 'isVar', 'isLit']
+
   def __init__(self, value, varHuh):
     self.value = value
     self.isVar = varHuh
