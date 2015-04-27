@@ -101,7 +101,7 @@ def entry_point(argv):
   test10heap = Heap()
   factaddr   = test10heap.new_addr()
   factbody   = PrimAlts(
-                 [ LitAlt(0, Lit(1))] ,
+                 [ LitAlt(0, Lit(1))],
                  DefaultAlt(
                   "n", 
                   Case(
@@ -128,9 +128,61 @@ def entry_point(argv):
   main12     = mtclos([],test12)
   test(main12,test10heap,"Test 12")
 
+  
+  test13heap = Heap()
+  factaddr   = test13heap.new_addr()
+  factapp    = Value(factaddr,False)
+  factbody   = PrimAlts(
+                 [ LitAlt(0, Lit(1))],
+                 DefaultAlt(
+                  "n",
+                  let_case(PrimOp("-",[Var("n"),Lit(1)])
+                          , "nm"
+                          , let_case(App(factapp,[Var("nm")])
+                                    , "m"
+                                    , PrimOp("*",[Var("n"),Var("m")])))))
+  factclos   = mtclos(["n"],Case(Var("n"),factbody))
+  test13heap.set_addr(factaddr,factclos)
+  test13     = App(factapp,[Lit(5)])
+  main13     = mtclos([],test13)
+  test(main13,test13heap,"Test 13")
+
+
+  test14heap = Heap()
+  fibaddr    = test14heap.new_addr()
+  fibapp     = Value(fibaddr,False)
+  fibbody    = PrimAlts(
+                 [ LitAlt(0, Lit(1)), LitAlt(1, Lit(1))],
+                 DefaultAlt(
+                  "n",
+                  let_case(
+                    PrimOp("-",[Var("n"),Lit(1)])
+                    , "n1"
+                    , let_case(
+                        PrimOp("-",[Var("n"),Lit(2)])
+                        , "n2"
+                        , let_case(
+                            App(fibapp,[Var("n1")])
+                            , "r1"
+                            , let_case(
+                              App(fibapp,[Var("n2")])
+                              , "r2"
+                              , PrimOp("+",[Var("r1"),Var("r2")])))))))
+  fibclos   = mtclos(["n"],Case(Var("n"),fibbody))
+  test14heap.set_addr(fibaddr,fibclos)
+  test14     = App(fibapp,[Lit(6)])
+  main14     = mtclos([],test14)
+  test(main14,test14heap,"Test 14")
+
   return 0
 
 # ___ Define and setup target ___
+
+def bind_alt(var, rhs):
+  return PrimAlts([], DefaultAlt(var,rhs))
+
+def let_case(bind,var,body):
+  return Case(bind,bind_alt(var,body))
 
 def target(*args):
   return entry_point
