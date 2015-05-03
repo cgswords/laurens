@@ -159,11 +159,12 @@ def entry_point(argv):
 
   n = int(argv[1])
 
-  # fibclos,fibbody,fibapp,test14heap = getFibAST(Heap(), n)
-  test14     = PrimOp("*",[Lit(n),Lit(n)])
+  fibclos,fibbody,fibapp,test14heap = getFibAST(Heap())
+  # test14     = PrimOp("*",[Lit(n),Lit(n)])
+  test14     = App(fibapp,[Lit(n)])
   main14     = mtclos([],test14)
-  # test(main14,test14heap,"Test 14")
-  test(main14,Heap(),"Test 14")
+  test(main14,test14heap,"Test 14")
+  # test(main14,Heap(),"Test 14")
     
 # test15     = App(fibapp,[Lit(10)])
 # main15     = mtclos([],test15)
@@ -171,32 +172,32 @@ def entry_point(argv):
 
   return 0
 
-# def getFibAST(test14heap, n):
-#   fibaddr    = test14heap.new_addr()
-#   fibapp     = Value(fibaddr,False)
-#   fibbody    = PrimAlts(
-#                  [ LitAlt(0, Lit(0)), LitAlt(1, Lit(1))],
-#                  DefaultAlt(
-#                   "n",
-#                   let_case(
-#                     PrimOp("-",[Var("n"),Lit(1)])
-#                     , "n1"
-#                     , let_case(
-#                         PrimOp("-",[Var("n"),Lit(2)])
-#                         , "n2"
-#                         , let_case(
-#                             App(fibapp,[Var("n1")])
-#                             , "r1"
-#                             , let_case(
-#                               App(fibapp,[Var("n2")])
-#                               , "r2"
-#                               , PrimOp("+",[Var("r1"),Var("r2")])))))))
-#   fibclos   = mtclos(["n"],Case(Var("n"),fibbody)) 
-#   test14heap.set_addr(fibaddr,fibclos)
-# 
-#   return fibclos,fibbody,fibapp,test14heap
-# 
-# getFibAST._dont_inline_=True
+def getFibAST(test14heap):
+  fibaddr    = test14heap.new_addr()
+  fibapp     = Value(fibaddr,False)
+  fibbody    = PrimAlts(
+                 [ LitAlt(0, Lit(0)), LitAlt(1, Lit(1))],
+                 DefaultAlt(
+                  "n",
+                  let_case(
+                    PrimOp("-",[Var("n"),Lit(1)])
+                    , "n1"
+                    , let_case(
+                        PrimOp("-",[Var("n"),Lit(2)])
+                        , "n2"
+                        , let_case(
+                            App(fibapp,[Var("n1")])
+                            , "r1"
+                            , let_case(
+                              App(fibapp,[Var("n2")])
+                              , "r2"
+                              , PrimOp("+",[Var("r1"),Var("r2")])))))))
+  fibclos   = mtclos(["n"],Case(Var("n"),fibbody)) 
+  test14heap.set_addr(fibaddr,fibclos)
+
+  return fibclos,fibbody,fibapp,test14heap
+
+getFibAST._dont_inline_=True
 
 # ___ Define and setup target ___
 
