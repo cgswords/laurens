@@ -12,8 +12,9 @@ import op
 from debug         import logMsg, debug
 from parse         import parse
 from data.closure  import Closure
-from data.stack    import Stack
+from data.argstack import ArgStack
 from data.retstack import RetStack
+from data.updstack import UpdStack
 from data.heap     import Heap
 from data.config   import Config
 
@@ -79,7 +80,7 @@ def test(main,heap,test_name):
   debug("------------------------------------------------")
   debug(test_name)
   code   = op.Eval(ast.ast.App(ast.ast.Var("main"), []), {})
-  answer = loop(Config(code, Stack(), Stack(), Stack(), heap, {"main":ast.ast.Value(main_addr,False)}))
+  answer = loop(Config(code, ArgStack(), RetStack(), UpdStack(), heap, {"main":ast.ast.Value(main_addr,False)}))
   debug(str(answer))
 
 

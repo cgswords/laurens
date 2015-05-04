@@ -20,6 +20,11 @@ class RetStack(object):
       return ast.cont.EmptyCont()
     return self.internal.pop()
 
+  def empty(self):
+    if len(self.internal) == 0:
+      return True
+    return False
+
   def peek(self):
     if len(self.internal) == 0:
       return (False,ast.cont.EmptyCont())
@@ -32,25 +37,3 @@ class RetStack(object):
   def __str__(self):
     return "Stack - " + str(self.internal)
 
-## from collections import deque
-## 
-## class Stack(object):
-##   def __init__(self):
-##     self.dq   = deque()
-## 
-##   def push(self,value):
-##     return self.dq.append(value)
-## 
-##   def extend(self,values):
-##     values = values.reverse()
-##     for v in values:
-##       self.push(v)
-## 
-##   def pop(self):
-##     return self.dq.pop()
-## 
-##   def peek(self):
-##     return self.dq[0]
-## 
-##   def __len__(self):
-##     return len(self.dq)

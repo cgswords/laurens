@@ -1,6 +1,6 @@
 import ast.ast
 
-class Stack(object):
+class UpdStack(object):
   def __init__(self):
     self.internal   = []
 
@@ -14,6 +14,11 @@ class Stack(object):
     for v in values:
       self.internal.append(v)
 
+  def empty(self):
+    if len(self.internal) == 0:
+      return True
+    return False
+
   def pop(self):
     return self.internal.pop()
 
@@ -21,6 +26,9 @@ class Stack(object):
     if len(self.internal) == 0:
       return (False,ast.ast.Lit(0))
     return (True,self.internal[0])
+  
+  def combine(self, stk):
+    self.internal.extend(stk.internal)
 
   def __len__(self):
     return len(self.internal)
