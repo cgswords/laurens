@@ -31,29 +31,16 @@ jitdriver = JitDriver(greens=['code']
 def terminateHuh(config):
   return (((config.code.op == op.ReturnConOp) or 
            (config.code.op == op.ReturnIntOp)) 
-          and (not config.ret_stack.peek()[0]))
+          and config.ret_stack.empty()
+          and config.upd_stack.empty())
 
 def loop(config):
 
   while not terminateHuh(config):
     jitdriver.jit_merge_point( code       = config.code)
-                            #, config     = config
-                            #, arg_stack  = config.arg_stack 
-                            #, ret_stack  = config.ret_stack 
-                            #, upd_stack  = config.upd_stack 
-                            #, heap       = config.heap
-                            #, global_env = config.global_env)
     debug("-------------")
     debug(str(config))
     config = config.code.step(config)
-
-    #jitdriver.can_enter_jit(code=config.code)
-    #                       , config     = config
-    #                       , arg_stack  = config.arg_stack 
-    #                       , ret_stack  = config.ret_stack 
-    #                       , upd_stack  = config.upd_stack 
-    #                       , heap       = config.heap
-    #                       , global_env = config.global_env)   
   return config
 
 def run(fp):

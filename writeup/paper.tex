@@ -44,7 +44,8 @@
 
 \lstnewenvironment{code}[1][]%
   {\noindent\medskip 
-     \lstset{basicstyle=\sffamily\footnotesize,frame=single,#1}}
+     %\lstset{basicstyle=\sffamily\footnotesize,frame=single,#1}}
+     \lstset{basicstyle=\sffamily\footnotesize,#1}}
   {}
 
 %\titlebanner{banner above paper title}        % These are ignored unless
@@ -98,10 +99,11 @@ presented by \citet{spj:stgmachine}.
 In this section, we give a brief sketch of the implementation approach we take
 to construct the STG Machine in RPython, discussing the general structure of the
 implementation. To begin, we sketch the directory structure and describe each file
-there:
+in Figure~\ref{fig:dir} to outline the overall project.
 
+\begin{figure}
 \begin{itemize}
-\item \lstinline{laurens/}
+\item \lstinline{laurens/} -- Top-level directory
   \begin{itemize}
     \item \lstinline{config.py} -- Configuration file (currently unused)
     \item \lstinline{debug.py}  -- Debug utilities, primarily for printing
@@ -109,42 +111,37 @@ there:
     \item \lstinline{op.py}     -- The operation nodes, which each contain
                                    a \lstinline{step} operation that performs
                                    a machine reduction.
-    \item \lstinline{parse.py}  -- The sketch of an input parser (currently 
-                                   unstarted)
+    \item \lstinline{parse.py}  -- Input parser (currently unstarted)
     \item \lstinline{stg.py}    -- The main loop of the implementation
     \item \lstinline{tests.py}  -- A set of tests written in terms of AST
                                    nodes for the machine; this serves as
                                    an alternative entry point
   \item \lstinline{laurens/ast/}
     \begin{itemize}
-      \item \lstinline{ast.py}  -- Contains the AST nodes that make up expressions;
+      \item \lstinline{ast.py}  -- AST nodes that make up expressions;
                                    part of \lstinline{op.py} should likely be
                                    refactored into this file
-      \item \lstinline{cont.py} -- Continuations that are pushed to the Return Stack 
+      \item \lstinline{cont.py} -- Continuations for the  Return Stack 
     \end{itemize}
   \item \lstinline{laurens/data/}
     \begin{itemize}
       \item \lstinline{argstack.py} -- Stack for arguments to functions
       \item \lstinline{closure.py}  -- Data structure to represent closures
-      \item \lstinline{config.py}   -- Configuration file (currently unused)
+      \item \lstinline{config.py}   -- Machine Configuration
       \item \lstinline{heap.py}     -- Heap structure
-      \item \lstinline{heapobj.py}  -- Objects that live on the heap
-      \item \lstinline{retstack.py} --
-      \item \lstinline{updframe.py} --
-      \item \lstinline{updstack.py} -- 
+      \item \lstinline{retstack.py} -- Stack for return continuations
+      \item \lstinline{updframe.py} -- Update frame tuple
+      \item \lstinline{updstack.py} -- Stack for update frames
     \end{itemize}
   \end{itemize}
 \end{itemize}
+\caption{\label{fig:dir}The directory structure of Laurens.}
+\end{figure}
 
+\subsection{The Machine Configuration}
 
-\section{\emph{Francesca}} %% RPython
-
-In this section, we discuss a number of intricacies that require careful
-consideration during implementation of the STG machine.
-
-\subsection{The Configuration Structure}
-We begin by briefly sketching the machine configuration, which contains
-six individual pieces:
+Before we discuss the implementation details, we describe the
+STG Machine. This abstract machine uses a six-tuple configuration:
 \[\langle op; as; rs; us; h; \sigma\rangle\]
 Unsurprisingly, each component plays a unique role in the machine:
 \begin{itemize}
@@ -175,20 +172,72 @@ We take this approach for two reasons. First, we are working from the
 assumption that RPython should be able to properly handle the interpretation
 structure of the STG machine, and thus these individual stacks should not
 cause critical, performance-inhibiting overhead.
-Second, RPython performs immense amounts of type inference and combining
-these stacks would require that we carefully package each different node
-in a new object to indicate which of the original stacks it lived on,
-thus adding another level of indirection that the compiler must 
-overcome\footnote{There are other mechanisms to avoid this discussed
-in the original work, but they require subtle bit manipulation that
-would need to be faked in a higher-level implementation.}. 
+Second, RPython performs immense amounts of type inference and so we use
+separate stack implementations, as we discuss further in
+Section~\ref{sec:typeinf}.
 
-This automatic type distinction has a further problem, however: we need
-identical classes for each of the \lstinline{arg_stack}, \lstinline{ret_stack},
-and \lstinline{upd_stack} so that RPython may infer each to a different,
-appropriate type. Indeed, we would suggest that this is one of the largest
+\subsection{The Main Loop}
+
+\begin{figure}
+\begin{code}
+def terminateHuh(config):
+  return 
+    (((config.code.op == op.ReturnConOp) or 
+      (config.code.op == op.ReturnIntOp)) 
+     and config.ret_stack.empty()
+     and config.upd_stack.empty())
+
+def loop(config):
+  while not terminateHuh(config):
+    jitdriver.jit_merge_point(code = 
+                                config.code)
+    config = config.code.step(config)
+  return config
+\end{code}
+\caption{\label{fig:loop}The main loop and termination test.}
+\end{figure}
+
+The \lstinline{stg.py} file serves as the main loop, driven by operation steps
+in \lstinline{op.py}. Everything else supports this main interaction.  
+Our overall computational mechanism is presented in Figure~\ref{fig:loop}. The
+main file contains a loop driver that steps the configuration until there is no
+more to do. At each step, we call \lstinline{step} on the current configuration,
+receiving a new one. This computation proceeds until we terminate with either
+an integer or a constructor and both the update and return stacks are empty.
+
+The operations are broken up by the STG machine into four possible operations:
+evaluation, entering, returning a construct, and returning an integer, given
+as \emph{Eval $e$ $\rho$}, \emph{Enter $a$}, \emph{ReturnCon $c$ $xs$}, and
+\emph{ReturnInt $i$} in the reduction semantics. We implement each of these
+as an \emph{operation node} in \lstinline{op.py}, wherein each has a
+\lstinline{step} method that expects a configuration using that operator
+and dispatches appropriately, returning the new machine configuration.
+
+\section{\emph{Francesca}} %% RPython
+
+In this section, we discuss a number of intricacies that require careful
+consideration during implementation of the STG machine.
+
+\subsection{Unique Stack Implementations}\label{sec:typeinf}
+
+As previously state, RPython attempts exhaustive type inference for structures
+during compilation. This approach has forced us into using three different
+stack implementations, all identical in code; we would like to use a single
+stack defined as \lstinline{data/stack.py}, but these authors could not find
+a way to circumvent the type inference to allow such reuse.
+Indeed, we would suggest that this is one of the largest
 hurdles in constructing a project such as this in RPython: there is a non-zero
 amount of code duplication required to simply exist in the RPython ecosystem.
+
+Furthermore, the later sections of \citet{spj:stgmachine} describe an
+optimization for combining stacks that would suggest that we can combine these
+stacks by carefully packaging each different node in a new object to indicate
+which of the original stacks it lived on\footnote{There are other mechanisms to
+avoid this discussed in the original work, but they require subtle bit
+manipulation that would need to be faked in a higher-level implementation.}. 
+Unfortunately, this would add one further level of indirection for the compiler
+and further obfuscate our implementation, and it is unclear if we could gain
+speed for the effort.  Further experimentation should be done, here, however.  
 
 \subsection{The Funny Case of Laziness}
 
@@ -236,6 +285,27 @@ nodes, extract their values, and then construct a \lstinline{ReturnIn} operation
 code for the configuration.
 
 \section{\emph{Neptune} n\'{e}e \emph{Fortune}} %% Conclusion / Future Work
+
+Finally, we discuss our timing results, and must report a negative one:
+the final implementation is \emph{slower} when we perform tracing on
+a sample program computing the 30th Fibonacci number. This is almost certainly
+the result of our na\"{i}ve tracing mechanism, wherien we consider every node as
+a possible merge point for the JIT, introducing immense tracing overhead to the
+computation. Thus it is unclear if Tracing is suitable for the STG machine
+because we have not performed effort to fine-tune our implementation.
+
+Beyond this result, we still have much to do:
+\begin{itemize}
+\item Write a full parser that will construct AST nodes from reasonable input;
+\item Write a more extensive test suite to examine and use constructors,
+      \lstinline{let}, \lstinline{letrec}, laziness, etc.; this will be much
+      easier once a parser is written;
+\item Support a full range of built-in functions, including I/O and additional
+      numeric operators;
+\item Replace the dictionary-based representation of environments with a
+      more efficient data structure
+\item Fine-tune the JIT heuristics to gain speed.
+\end{itemize}
 
 %% \section{Appendix Title}
 %% 
