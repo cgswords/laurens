@@ -1,0 +1,260 @@
+%-----------------------------------------------------------------------------
+%
+%               Template for sigplanconf LaTeX Class
+%
+% Name:         sigplanconf-template.tex
+%
+% Purpose:      A template for sigplanconf.cls, which is a LaTeX 2e class
+%               file for SIGPLAN conference proceedings.
+%
+% Guide:        Refer to "Author's Guide to the ACM SIGPLAN Class,"
+%               sigplanconf-guide.pdf
+%
+% Author:       Paul C. Anagnostopoulos
+%               Windfall Software
+%               978 371-2316
+%               paul@windfall.com
+%
+% Created:      15 February 2005
+%
+%-----------------------------------------------------------------------------
+
+
+\documentclass[preprint]{sigplanconf}
+
+% The following \documentclass options may be useful:
+%
+% 10pt          To set in 10-point type instead of 9-point.
+% 11pt          To set in 11-point type instead of 9-point.
+% authoryear    To obtain author/year citation style instead of numeric.
+
+\usepackage{amsmath, listings, bcprules, amsthm, amssymb, proof}
+\usepackage{textcomp}
+
+\begin{document}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{proposition}[theorem]{Proposition}
+
+\conferenceinfo{B629 '15}{Bloomington, IN.}
+\copyrightyear{2015} 
+\copyrightdata{[to be supplied]} 
+
+\lstnewenvironment{code}[1][]%
+  {\noindent\medskip 
+     \lstset{basicstyle=\sffamily\footnotesize,frame=single,#1}}
+  {}
+
+%\titlebanner{banner above paper title}        % These are ignored unless
+%\preprintfooter{short description of paper}   % 'preprint' option specified.
+
+\title{Laurens de Graaf}
+\subtitle{A Spineless, ``Tagless'' Graph-Reduction Machine in RPython}
+
+%% \title{Semantics for Explicit Contract Monitoring and Support for Multiple Evaluation Strategies}
+%\subtitle{Subtitle Text, if any}
+
+\lstset{language=Python, basicstyle=\sffamily}
+
+%% \authorinfo{Name1}
+%%            {Affiliation1}
+%%            {Email1}
+\authorinfo{Cameron Swords}
+           {Indiana University}
+           {\{cswords\}@indiana.edu}
+\maketitle
+
+\begin{abstract}
+\begin{center}
+\emph{``A Great and Mischievous Pirate''
+{\begin{flushright}$\sim$ Henry Morgan\end{flushright}}}
+\end{center}
+\end{abstract}
+
+%% \category{CR-number}{subcategory}{third-level}
+\terms
+Languages, JIT, Tracing
+\keywords
+piracy, rpython, tracing, jit
+
+\section{\emph{Laurencillo}} %% Introduction
+
+
+There has been tremendous work into JITs and JIT optimizations in recent years.
+Most notably, the RPython tracing JIT has come to be a de-facto standard for the
+power of a tracing JIT, driving their flagship python interpreter PyPy. In this
+work we present an implementation of the Spinless, Tagless G-Machine (herein the
+STG Machine) as an interpreter written on top of RPython. 
+
+The original aim of this work was to construct a fast implementation of the
+STG machine that might support a reasonable subset of the compilation output
+of GHC. To this end, our implementation is faithful to the original semantics
+presented by \citet{spj:stgmachine}.
+
+\section{\emph{Tigre}} %% The Spineless, Tagless G-Machine
+
+In this section, we give a brief sketch of the implementation approach we take
+to construct the STG Machine in RPython, discussing the general structure of the
+implementation. To begin, we sketch the directory structure and describe each file
+there:
+
+\begin{itemize}
+\item \lstinline{laurens/}
+  \begin{itemize}
+    \item \lstinline{config.py} -- Configuration file (currently unused)
+    \item \lstinline{debug.py}  -- Debug utilities, primarily for printing
+                                   machine states during execution
+    \item \lstinline{op.py}     -- The operation nodes, which each contain
+                                   a \lstinline{step} operation that performs
+                                   a machine reduction.
+    \item \lstinline{parse.py}  -- The sketch of an input parser (currently 
+                                   unstarted)
+    \item \lstinline{stg.py}    -- The main loop of the implementation
+    \item \lstinline{tests.py}  -- A set of tests written in terms of AST
+                                   nodes for the machine; this serves as
+                                   an alternative entry point
+  \item \lstinline{laurens/ast/}
+    \begin{itemize}
+      \item \lstinline{ast.py}  -- Contains the AST nodes that make up expressions;
+                                   part of \lstinline{op.py} should likely be
+                                   refactored into this file
+      \item \lstinline{cont.py} -- Continuations that are pushed to the Return Stack 
+    \end{itemize}
+  \item \lstinline{laurens/data/}
+    \begin{itemize}
+      \item \lstinline{argstack.py} -- Stack for arguments to functions
+      \item \lstinline{closure.py}  -- Data structure to represent closures
+      \item \lstinline{config.py}   -- Configuration file (currently unused)
+      \item \lstinline{heap.py}     -- Heap structure
+      \item \lstinline{heapobj.py}  -- Objects that live on the heap
+      \item \lstinline{retstack.py} --
+      \item \lstinline{updframe.py} --
+      \item \lstinline{updstack.py} -- 
+    \end{itemize}
+  \end{itemize}
+\end{itemize}
+
+
+\section{\emph{Francesca}} %% RPython
+
+In this section, we discuss a number of intricacies that require careful
+consideration during implementation of the STG machine.
+
+\subsection{The Configuration Structure}
+We begin by briefly sketching the machine configuration, which contains
+six individual pieces:
+\[\langle op; as; rs; us; h; \sigma\rangle\]
+Unsurprisingly, each component plays a unique role in the machine:
+\begin{itemize}
+  \item $op$ contains the operation for the reduction to perform;
+  \item $as$ contains the argument stack, which maintains arguments
+        during applications;
+  \item $rs$ contains the return stack, which manages return points
+        (primarily ``case'' expressions);
+  \item $us$ contain the update stack, used for handling thunk updates;
+  \item $h$ contains the heap, where memory addresses map to closures;
+  \item $\sigma$ contains the \emph{global environment} of bindings.
+\end{itemize}
+While \citet{spj:stgmachine} observe that many of these stacks may
+be combined during compilation to C as an optimization, we maintain
+this configuration explicitly in our implementation:
+\begin{code}
+class Config(object):
+  def __init__(self, code, args, ret,  
+                     upd, heap, genv):
+    self.code       = code
+    self.arg_stack  = args
+    self.ret_stack  = ret
+    self.upd_stack  = upd
+    self.heap       = heap
+    self.global_env = genv
+\end{code}
+We take this approach for two reasons. First, we are working from the
+assumption that RPython should be able to properly handle the interpretation
+structure of the STG machine, and thus these individual stacks should not
+cause critical, performance-inhibiting overhead.
+Second, RPython performs immense amounts of type inference and combining
+these stacks would require that we carefully package each different node
+in a new object to indicate which of the original stacks it lived on,
+thus adding another level of indirection that the compiler must 
+overcome\footnote{There are other mechanisms to avoid this discussed
+in the original work, but they require subtle bit manipulation that
+would need to be faked in a higher-level implementation.}. 
+
+This automatic type distinction has a further problem, however: we need
+identical classes for each of the \lstinline{arg_stack}, \lstinline{ret_stack},
+and \lstinline{upd_stack} so that RPython may infer each to a different,
+appropriate type. Indeed, we would suggest that this is one of the largest
+hurdles in constructing a project such as this in RPython: there is a non-zero
+amount of code duplication required to simply exist in the RPython ecosystem.
+
+\subsection{The Funny Case of Laziness}
+
+While standard lazy languages provide forcing at primitive operations, the
+STG machine departs from this explicit approach. Instead, a primitive operation
+assumes that its arguments are pre-evaluated, and this became troublesome when
+testing them. To further elaborate this point, observe a standard definition
+of addition in the STG language:
+\begin{code}[language=Haskell]
++ = \ {} \\n {n,m} -> case n of
+                        n' -> case m of
+                                m' -> #+ n' m'
+\end{code}
+This snippet is interpreted as: 
+\begin{center}
+\emph{
+``Plus is a lambda with no free variables that
+is should not be updated. When applied, it will \lstinline{case} on
+\lstinline{n} and then \lstinline{m}, using the forcing position of
+\lstinline{case} to ensure that both inputs are evaluated before using the
+primitive addition operator \lstinline{\#+} on the result.''
+}
+\end{center}
+While not particularly tied to the implementation in RPython, we found this
+insight invaluable during implementation and testing and so we have included
+it here. This manifests with the following dispatch for addition in our
+implementation:
+\begin{code}
+elif expr_type is ast.ast.PrimOp:
+  if cexp.oper == "+":
+    lookups = vals(code.env,
+                   global_env, 
+                   cexp.atoms)
+    x1      = lookups[0]
+    x2      = lookups[1]
+    assert isinstance(x1,ast.ast.ValAST)
+    assert isinstance(x2,ast.ast.ValAST)
+    res     = x1.value + x2.value
+    config.code = op.ReturnInt(res) 
+\end{code}
+We first ensure that we are performing addition and then look up the operators
+with \lstinline{vals} (which uses the local and global environments for variable
+lookup). Next, we ensure that each of the resulting lookups are valid Value
+nodes, extract their values, and then construct a \lstinline{ReturnIn} operation
+code for the configuration.
+
+\section{\emph{Neptune} n\'{e}e \emph{Fortune}} %% Conclusion / Future Work
+
+%% \section{Appendix Title}
+%% 
+%% This is the text of the appendix, if you need one.
+
+%% \acks
+%% 
+%% Acknowledgments, if needed.
+
+% We recommend abbrvnat bibliography style.
+
+\bibliographystyle{abbrvnat}
+
+% The bibliography should be embedded for final submission.
+
+\softraggedright
+\bibliography{p}
+
+%%\appendix
+%%\input{proof-appendix.tex}
+
+\end{document}
