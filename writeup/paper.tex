@@ -28,7 +28,7 @@
 % 11pt          To set in 11-point type instead of 9-point.
 % authoryear    To obtain author/year citation style instead of numeric.
 
-\usepackage{amsmath, listings, bcprules, amsthm, amssymb, proof}
+\usepackage{amsmath, listings, amsthm, amssymb, proof}
 \usepackage{textcomp}
 
 \begin{document}
@@ -84,10 +84,12 @@ piracy, rpython, tracing, jit
 
 
 There has been tremendous work into JITs and JIT optimizations in recent years.
-Most notably, the RPython tracing JIT has come to be a de-facto standard for the
-power of a tracing JIT, driving their flagship python interpreter PyPy. In this
-work we present an implementation of the Spinless, Tagless G-Machine (herein the
-STG Machine) as an interpreter written on top of RPython. 
+Most notably, the RPython tracing JIT~\cite{Bolz:2009} has come to be
+a de-facto standard for the power of a tracing JIT, driving their
+flagship python interpreter PyPy. In this work we present an
+implementation of the Spinless, Tagless
+G-Machine~\cite{spj:stgmachine} (herein the STG Machine) as an
+interpreter written on top of RPython. 
 
 The original aim of this work was to construct a fast implementation of the
 STG machine that might support a reasonable subset of the compilation output
@@ -297,7 +299,13 @@ how we have leveraged the \lstinline{jitdriver} in our implementation.
 
 \subsection{RPython Customizations}
 
-
+After constructing an STG machine interpreter that functioned in
+\lstinline{PyPy}, we spent notable work fixing a number of
+implementation details to work with the RPython compiler. These
+optimizations include data structure duplication due to type
+constraints, replacing \lstinline{==} with \lstinline{is}
+for efficiency, and using \lstinline{assert} and subclassing
+to aid in type-directed optimizations.
 
 \paragraph{Unique Stack Implementations.}\label{sec:typeinf}
 As previously state, RPython attempts exhaustive type inference for structures
@@ -319,7 +327,7 @@ Unfortunately, this would add one further level of indirection for the compiler
 and further obfuscate our implementation, and it is unclear if we could gain
 speed for the effort.  Further experimentation should be done, here, however.  
 
-\paragraph{The Funny Case of Laziness.}
+\paragraph{Primitive Operations and Assertions.}
 While standard lazy languages provide forcing at primitive operations, the
 STG machine departs from this explicit approach. Instead, a primitive operation
 assumes that its arguments are pre-evaluated, and this became troublesome when
@@ -340,21 +348,24 @@ is should not be updated. When applied, it will \lstinline{case} on
 primitive addition operator \lstinline{\#+} on the result.''
 }
 \end{center}
-While not particularly tied to the implementation in RPython, we found this
-insight invaluable during implementation and testing and so we have included
-it here. This manifests with the following dispatch for addition in our
-implementation:
+This approach to implementing standard primitive operators yielded an
+additional problem in RPython: during environment lookup, the
+inference system had no recourse to determine that our resultant lookup
+values were, in fact, integers. To this end, we added an additional
+class to the AST class hierarchy, a \lstinline{ValAST}, and added
+\lstinline{assert} statements during primitive operator evaluation
+facilitate value extraction:
 \begin{code}
 elif expr_type is ast.ast.PrimOp:
   if cexp.oper == "+":
     lookups = vals(code.env,
                    global_env, 
                    cexp.atoms)
-    x1      = lookups[0]
-    x2      = lookups[1]
+    x1     = lookups[0]
+    x2     = lookups[1]
     assert isinstance(x1,ast.ast.ValAST)
     assert isinstance(x2,ast.ast.ValAST)
-    res     = x1.value + x2.value
+    res    = x1.value + x2.value
     config.code = op.ReturnInt(res) 
 \end{code}
 We first ensure that we are performing addition and then look up the operators
