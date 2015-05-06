@@ -80,7 +80,7 @@ Languages, JIT, Tracing
 \keywords
 piracy, rpython, tracing, jit
 
-\section{\emph{Laurencillo}} %% Introduction
+\section{\emph{Laurencillo}~-- Introduction} %% Introduction
 
 
 There has been tremendous work into JITs and JIT optimizations in recent years.
@@ -94,7 +94,7 @@ STG machine that might support a reasonable subset of the compilation output
 of GHC. To this end, our implementation is faithful to the original semantics
 presented by \citet{spj:stgmachine}.
 
-\section{\emph{Tigre}} %% The Spineless, Tagless G-Machine
+\section{\emph{Tigre}~-- The STG Machine} %% The Spineless, Tagless G-Machine
 
 In this section, we give a brief sketch of the implementation approach we take
 to construct the STG Machine in RPython, discussing the general structure of the
@@ -207,19 +207,99 @@ an integer or a constructor and both the update and return stacks are empty.
 
 The operations are broken up by the STG machine into four possible operations:
 evaluation, entering, returning a construct, and returning an integer, given
-as \emph{Eval $e$ $\rho$}, \emph{Enter $a$}, \emph{ReturnCon $c$ $xs$}, and
-\emph{ReturnInt $i$} in the reduction semantics. We implement each of these
+as \emph{Eval $e$ $\rho$}, \emph{Enter $a$}, \emph{ReturnInt $i$}, and
+\emph{ReturnCon $c$ $xs$} in the reduction semantics. We implement each of these
 as an \emph{operation node} in \lstinline{op.py}, wherein each has a
-\lstinline{step} method that expects a configuration using that operator
-and dispatches appropriately, returning the new machine configuration.
+\lstinline{step} method that expects a configuration using that operator and
+dispatches appropriately, returning the new machine configuration.
 
-\section{\emph{Francesca}} %% RPython
+\subsection{Operations}
+
+There are four operations in the STG machine which indicate the next
+step the machine will take. We implement each of these as a \lstinline{step}
+attached to an operation node in \lstinline{op.py}, allowing us to easily
+modularize the main loop.
+
+\paragraph{\textit{Eval e $\rho$}.}
+The \textit{Eval} step evaluates an operation, yielding either a 
+sub-expression to evaluate (in the case of a \lstinline{case} operation)
+or an \textit{Enter} operation with a heap address location (such as when
+evaluating an application).
+This is, by far, the most grotesque part of the implementation: to implement the
+evaluation step, we extract the expression node and branch on its type,
+constructing a new configuration as necessary based on the result.
+
+\paragraph{\textit{Enter a}.}
+The \textit{Enter} step enters a heap address, which is a \emph{closure} stored
+in the heap. This operation also handles thunk updates and partial applications,
+constructing an updated thunk in the former case and a new thunk with additional
+input in the latter.  
+
+\paragraph{\textit{ReturnInt i}.}
+This operation indicates that an expression has evaluated to an integer $i$. The
+return stack will contain a \lstinline{case} expression to match against this
+result. We present this case in full in Figure~\ref{fig:ReturnInt}; the 
+\lstinline{int_case_lookup} operator takes the relevant cases and identifies the
+appropriate one. We also indicate a \emph{default case}, which uses a binder
+with a default variable to bind the result if it does not match an integer
+literal.
+
+\begin{figure}
+\begin{code}
+def step(self,config):
+    debug("Int return")
+
+    if config.ret_stack.empty():
+      raise Exception('...')
+    else: 
+      retk      = config.ret_stack.pop()
+      if type(retk) is ast.cont.CaseCont:
+        ret_env   = retk.env.copy()
+        ret_alts  = retk.alts
+        value     = self.value
+
+        default,default_var,body = 
+          self.int_case_lookup(value, ret_alts)
+
+        if default:
+          if (default_var is not None):
+            var = default_var
+            ret_env[var] = 
+              ast.ast.Value(value, True)
+
+        config.code = op.Eval(body, ret_env)
+  
+    return config
+
+  def int_case_lookup(self,val,ret_alts):
+    # Assuming everything is a LitAlt
+    for alt in ret_alts.alternates: 
+      if alt.literal == val:
+        return (False, None, alt.rhs)
+
+    return (True, 
+            ret_alts.default.binder, 
+            ret_alts.default.rhs)
+\end{code}
+\caption{\label{fig:returnint}The \textit{ReturnInt} operation.}
+\end{figure}
+
+\paragraph{\textit{ReturnCon c xs}.}
+This operation indicates that an expression has evaluated to a constructor $c$
+with arguments in the $xs$. The return stack (or, if it is empty, the update
+stack) will contain a \lstinline{case} expression to match against this result.
+
+\section{\emph{Francesca}~-- RPython Usage \& Notes} %% RPython
 
 In this section, we discuss a number of intricacies that require careful
-consideration during implementation of the STG machine.
+consideration during implementation of the STG machine before describing
+how we have leveraged the \lstinline{jitdriver} in our implementation.
 
-\subsection{Unique Stack Implementations}\label{sec:typeinf}
+\subsection{RPython Customizations}
 
+
+
+\paragraph{Unique Stack Implementations.}\label{sec:typeinf}
 As previously state, RPython attempts exhaustive type inference for structures
 during compilation. This approach has forced us into using three different
 stack implementations, all identical in code; we would like to use a single
@@ -229,7 +309,7 @@ Indeed, we would suggest that this is one of the largest
 hurdles in constructing a project such as this in RPython: there is a non-zero
 amount of code duplication required to simply exist in the RPython ecosystem.
 
-Furthermore, the later sections of \citet{spj:stgmachine} describe an
+Furthermore, the machine description~\cite{spj:stgmachine} describe an
 optimization for combining stacks that would suggest that we can combine these
 stacks by carefully packaging each different node in a new object to indicate
 which of the original stacks it lived on\footnote{There are other mechanisms to
@@ -239,8 +319,7 @@ Unfortunately, this would add one further level of indirection for the compiler
 and further obfuscate our implementation, and it is unclear if we could gain
 speed for the effort.  Further experimentation should be done, here, however.  
 
-\subsection{The Funny Case of Laziness}
-
+\paragraph{The Funny Case of Laziness.}
 While standard lazy languages provide forcing at primitive operations, the
 STG machine departs from this explicit approach. Instead, a primitive operation
 assumes that its arguments are pre-evaluated, and this became troublesome when
@@ -284,7 +363,33 @@ lookup). Next, we ensure that each of the resulting lookups are valid Value
 nodes, extract their values, and then construct a \lstinline{ReturnIn} operation
 code for the configuration.
 
-\section{\emph{Neptune} n\'{e}e \emph{Fortune}} %% Conclusion / Future Work
+\subsection{The RPython JIT Driver.}
+
+\begin{code}
+from rpython.rlib.jit import JitDriver, purefunction
+
+def get_location(code):
+    return "%s" % ( code )
+
+jitdriver = JitDriver(greens=['code']
+                     , reds='auto'
+                     , get_printable_location=get_location)
+
+def terminateHuh(config):
+  return (((config.code.op == op.ReturnConOp) or 
+           (config.code.op == op.ReturnIntOp)) 
+          and config.ret_stack.empty()
+          and config.upd_stack.empty())
+
+def loop(config):
+
+  while not terminateHuh(config):
+    jitdriver.jit_merge_point( code       = config.code)
+    config = config.code.step(config)
+  return config
+\end{code}
+
+\section{\emph{Neptune} n\'{e}e \emph{Fortune}~-- Conclusion} %% Conclusion / Future Work
 
 Finally, we discuss our timing results, and must report a negative one:
 the final implementation is \emph{slower} when we perform tracing on
