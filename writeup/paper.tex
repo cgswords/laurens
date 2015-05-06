@@ -71,6 +71,9 @@
 \begin{center}
 \emph{``A Great and Mischievous Pirate''
 {\begin{flushright}$\sim$ Henry Morgan\end{flushright}}}
+\emph{``I didn't proof-read this paper before I turned it in. I'm certain it's rough,
+       and needs at least one more rewrite.''
+{\begin{flushright}$\sim$ Cameron Swords\end{flushright}}}
 \end{center}
 \end{abstract}
 
@@ -191,8 +194,6 @@ def terminateHuh(config):
 
 def loop(config):
   while not terminateHuh(config):
-    jitdriver.jit_merge_point(code = 
-                                config.code)
     config = config.code.step(config)
   return config
 \end{code}
@@ -240,7 +241,7 @@ input in the latter.
 \paragraph{\textit{ReturnInt i}.}
 This operation indicates that an expression has evaluated to an integer $i$. The
 return stack will contain a \lstinline{case} expression to match against this
-result. We present this case in full in Figure~\ref{fig:ReturnInt}; the 
+result. We present this case in full in Figure~\ref{fig:returnint}; the 
 \lstinline{int_case_lookup} operator takes the relevant cases and identifies the
 appropriate one. We also indicate a \emph{default case}, which uses a binder
 with a default variable to bind the result if it does not match an integer
@@ -376,15 +377,23 @@ code for the configuration.
 
 \subsection{The RPython JIT Driver.}
 
+We implement a na\"{i}ve JIT driver with RPthon in our main loop, modifying it
+to support a merge point and identifying the \lstinline{code} piece of the 
+configuration as the \emph{green} portion. This modified main loop is presented
+in Figure~\ref{fig:jitloop}.
+\begin{figure}
 \begin{code}
-from rpython.rlib.jit import JitDriver, purefunction
+from rpython.rlib.jit 
+  import JitDriver, purefunction
 
 def get_location(code):
     return "%s" % ( code )
 
-jitdriver = JitDriver(greens=['code']
-                     , reds='auto'
-                     , get_printable_location=get_location)
+jitdriver = 
+  JitDriver( greens=['code']
+           , reds='auto'
+           , get_printable_location =
+               get_location)
 
 def terminateHuh(config):
   return (((config.code.op == op.ReturnConOp) or 
@@ -395,22 +404,52 @@ def terminateHuh(config):
 def loop(config):
 
   while not terminateHuh(config):
-    jitdriver.jit_merge_point( code       = config.code)
+    jitdriver.jit_merge_point( code = 
+                                 config.code)
     config = config.code.step(config)
   return config
 \end{code}
+\caption{\label{fig:jitloop}The JIT-sensitive main loop.}
+\end{figure}
+
+\subsection{Timing Results}
+
+Our timing results are surprisingly poor: 
+the final implementation is \emph{slower} when we perform tracing on
+a sample program computing the 30th Fibonacci number, as opposed to running
+it through PyPy (at 18 seconds versus 14 seconds). Perhaps less shocking,
+GHC can compile and run an equivalent program in approximately 0.022 seconds,
+suggesting we are several \emph{orders of magnitude} slower than the current
+GHC implementation.
+
+This is almost certainly the result of our na\"{i}ve tracing mechanism, wherein
+we consider every node as a possible merge point for the JIT, introducing
+immense tracing overhead to the computation. The first optimization we should
+explore is only considering \textit{Enter} operations for merge points. The
+second, less clear optimization, is that of termination conditions: using a
+termination condition as we have in our implementation can be hard on the
+tracing mechanism, but it is unclear without further investigation how our STG
+implementation might be modified to ``politely'' terminate, given the continuous
+interaction of the return and update stacks.
 
 \section{\emph{Neptune} n\'{e}e \emph{Fortune}~-- Conclusion} %% Conclusion / Future Work
 
-Finally, we discuss our timing results, and must report a negative one:
-the final implementation is \emph{slower} when we perform tracing on
-a sample program computing the 30th Fibonacci number. This is almost certainly
-the result of our na\"{i}ve tracing mechanism, wherien we consider every node as
-a possible merge point for the JIT, introducing immense tracing overhead to the
-computation. Thus it is unclear if Tracing is suitable for the STG machine
-because we have not performed effort to fine-tune our implementation.
+In closing, we found this project enlightening and insightful: the idea of a 
+tracing JIT is appealing, but there are a number of difficulties and concerns
+that arise in the area almost immediately that we have tried to discuss in this
+paper. Tracing seems, in some ways, a brittle box---at least in RPython, there
+are a number of hoops to leap through to get code compiled. To this end,
+it would would be interesting to see a similar system built in a strongly-typed
+language in order to avoid the ``surprise'' compilation errors that one
+experiences when building facilities in RPython. Compared to the standard
+approach of building a compiler, however, this alternative has a lot of promise
+in terms of rapid prototyping, language evolution, and general lack of
+compiler-specific expert knowledge. While the STG machine may have been a poor
+choice for implementation (due to the authors' lack of familiarity with its
+intricacies), using a system like RPython in the future for quick prototyping
+is certainly reasonable and worthwhile.
 
-Beyond this result, we still have much to do:
+Beyond this, we still have much to do:
 \begin{itemize}
 \item Write a full parser that will construct AST nodes from reasonable input;
 \item Write a more extensive test suite to examine and use constructors,
@@ -420,6 +459,8 @@ Beyond this result, we still have much to do:
       numeric operators;
 \item Replace the dictionary-based representation of environments with a
       more efficient data structure
+\item Consider breaking up the \textit{Eval} implementation into individual
+      AST nodes.
 \item Fine-tune the JIT heuristics to gain speed.
 \end{itemize}
 
@@ -427,9 +468,11 @@ Beyond this result, we still have much to do:
 %% 
 %% This is the text of the appendix, if you need one.
 
-%% \acks
-%% 
-%% Acknowledgments, if needed.
+\acks
+
+We'd like to thank Spenser Bauman for his immense interest and help
+in this work, and Sam Tobin-Hochstadt for facilitating the creation
+of this project as part of his Metaprogramming course.
 
 % We recommend abbrvnat bibliography style.
 
