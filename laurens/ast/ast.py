@@ -7,10 +7,12 @@ class AST(object):
 
 class ValAST(AST):
   _attrs_ = ['value']
+  _immutable_fields_ = ['value']
   def __init__(self):
     raise Exception('Cannot instantiate')
 
 class Program(object):
+  _immutable_fields_ = ['binds']
   def __init__(self, binds):
     self.binds = binds
 
