@@ -15,7 +15,7 @@ from data.updframe import UpdateFrame
 from debug         import logMsg, debug
 from parse         import parse
 
-from rpython.rlib.jit import purefunction
+from rpython.rlib.jit import purefunction, unroll_safe 
 
 EvalOp      = 0
 EnterOp     = 1
@@ -79,7 +79,7 @@ class Eval(Op):
   def __str__(self):
     return "\n\tExpr - " + str(self.expr) + "\n\tEnv - " + str(self.env)
 
-  @jit.unroll_safe
+  @unroll_safe
   def step(self,config):
     code       = config.code
     arg_stack  = config.arg_stack
@@ -239,7 +239,7 @@ class Enter(Op):
   def __str__(self):
     return "Enter - " + str(self.target)
 
-  @jit.unroll_safe
+  @unroll_safe
   def step(self, config):
     closure   = config.heap.lookup(config.code.target)
     lf        = closure.lam
@@ -314,7 +314,7 @@ class ReturnCon(Op):
   def __str__(self):
     return "Return Constructor - " + str(self.constructor) + str(self.rands)
 
-  @jit.unroll_safe
+  @unroll_safe
   def step(self, config):
     if config.ret_stack.empty():
         if config.upd_stack.empty():
@@ -377,7 +377,7 @@ class ReturnInt(Op):
   def __str__(self):
     return "Return Int - " + str(self.value)
 
-  @jit.unroll_safe
+  @unroll_safe
   def step(self,config):
     debug("Int return")
 
