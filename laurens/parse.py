@@ -35,7 +35,7 @@ from rply.token import BaseBox
 def parse(program):
   heap = data.heap.Heap()
   global_env = {}
-  return None,heap,global_env
+  return None, heap, global_env
 
 ## def parse(program):
 ##     parsed = []

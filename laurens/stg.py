@@ -24,8 +24,8 @@ def get_location(code):
     return "%s" % ( code )
 
 jitdriver = JitDriver(greens=['code']
-                     #, reds=['config','arg_stack', 'ret_stack', 'upd_stack', 'heap', 'global_env']
-                     , reds='auto'
+                     , reds=['config']
+                     #, reds='auto'
                      , get_printable_location=get_location)
 
 def terminateHuh(config):
@@ -36,11 +36,19 @@ def terminateHuh(config):
 
 def loop(config):
 
-  while not terminateHuh(config):
-    jitdriver.jit_merge_point( code       = config.code)
-    debug("-------------")
-    debug(str(config))
+  while True:
+    jitdriver.jit_merge_point(code=config.code.expr, config=config)
+    if terminateHuh(config):
+        return config
     config = config.code.step(config)
+    # Reduce until we get to a node backed by an AST
+    while type(config.code) is not op.Eval:
+        if terminateHuh(config):
+            return config
+        debug("-------------")
+        debug(str(config))
+        config = config.code.step(config)
+    jitdriver.can_enter_jit(code=config.code.expr, config=config)
   return config
 
 def run(fp):
