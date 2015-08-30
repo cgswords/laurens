@@ -72,9 +72,10 @@
     \item Framework for implementing \emph{dynamic} language interpreters
     \item Includes a runtime system with language agnostic JIT compiler
     \item The Haskell heap is a dynamic program
-    \item Previous work by Carl, Bolz, 
+    \item Previous work by Carl Bolz, 
           Even Wiik Thomassen\footnote{Implementing Haskell in RPython, Department of Computer
-    and Information Science, TDT4501}
+    and Information Science, TDT4501},
+         Knut Halvor Skrede\footnote{http://github.com/khskrede/mehh}
       \begin{itemize}
         \item High-level, lazy lambda calculus interpreter with constructors
         \item Core interpreter
@@ -110,6 +111,7 @@
 \begin{slide}{Performance}
   \begin{itemize}
     \item Thomassen's work sometimes beat GHCi
+    \item Skrede \& Thomassen, both core, both lose (badly) to GHC
     \item Current implementation is \emph{super-preliminary}
     \item Pycket (Tomorrow, Session 1) produces promising results
     \item What can we do to \emph{efficiently JIT} a lazy language?
