@@ -72,9 +72,10 @@
     \item Language+Framework for implementing \emph{dynamic} language interpreters
     \item Includes a runtime system with language agnostic JIT compiler
     \item The Haskell heap is a dynamic program
-    \item Previous work by Carl, Bolz, 
+    \item Previous work by Carl Bolz, 
           Even Wiik Thomassen\footnote{Implementing Haskell in RPython, Department of Computer
-    and Information Science, TDT4501}
+    and Information Science, TDT4501},
+         Knut Halvor Skrede\footnote{http://github.com/khskrede/mehh}
       \begin{itemize}
         \item High-level, lazy lambda calculus interpreter with constructors
         \item Core interpreter
@@ -91,15 +92,34 @@
   % compilers and interpreters
 \end{slide}
 
-\begin{slide}{Design}
+\begin{frame}[fragile]{Design - Faithful To STG}
+  \begin{center}
+    \begin{minted}{python}
+      def step(self,config):
+        code       = config.code
+        arg_stack  = config.arg_stack
+        ret_stack  = config.ret_stack
+        upd_stack  = config.upd_stack
+        global_env = config.global_env
+        heap       = config.heap
+    \end{minted}
+  \end{center}
     % Very high level compared to high performance
     % compilers and interpreters
-\end{slide}
+\end{frame}
 
 \begin{slide}{Performance}
   \begin{itemize}
+    \item Thomassen's work sometimes beat GHCi
+    \item Skrede \& Thomassen, both core, both lose (badly) to GHC
     \item Current implementation is \emph{super-preliminary}
     \item Pycket (Tomorrow, Session 1) produces promising results
+    \item What can we do to \emph{efficiently JIT} a lazy language?
+    \begin{itemize}
+      \item Utilize Pycket's callgraph model (or suitable variant)
+      \item Explore stack-shape-based tracing
+      \item Expose more optimization opportunities to the JIT
+    \end{itemize}
     % In fact, the STG machine itself is suboptimal as it is morbidly concerned
     % with the low level details
     \item Higher-level than compiler  (!! SHOULD WE SAY THIS !!)
@@ -108,6 +128,7 @@
 
 \begin{slide}{Moving Forward}
   \begin{itemize}
+    \item Refactor into Python OO style
     \item Support additional (modern) STG operations
     \item Construct front-end parser
     \item Perform additional tuning
