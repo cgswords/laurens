@@ -69,16 +69,21 @@
 \begin{slide}{Background}
     % What is RPython
   \begin{itemize}
-    \item Language+Framework for implementing \emph{dynamic} language interpreters
-    \item Includes a runtime system with language agnostic JIT compiler
-    \item The Haskell heap is a dynamic program
-    \item Previous work by Carl Bolz, 
-          Even Wiik Thomassen\footnote{Implementing Haskell in RPython},
-         Knut Halvor Skrede\footnote{http://github.com/khskrede/mehh}
-      \begin{itemize}
-        \item High-level, lazy lambda calculus interpreter with constructors
-        \item Core interpreter
-      \end{itemize}
+    % \item Language+Framework for implementing \emph{dynamic} language interpreters
+    % \item Includes a runtime system with language agnostic JIT compiler
+    \item RPython is for tracing JITs for \emph{dynamic} languages
+    % \item Includes a runtime system with language agnostic JIT compiler
+    % \item The Haskell heap is a dynamic program
+    \item Haskell's heap \emph{looks} dynamic during execution
+    \item Previous work:
+
+            \vspace*{1em}
+            $\begin{array}{l@{}l}\left. \begin{array}{@{}l@{}}
+            \text{Carl Friedrich Bolz} \\
+            \text{Even Wiik Thomassen}\\
+            \end{array} \right\}  & \text{Implementing Haskell in RPython}\\\\
+            \text{Knut Halvor Skrede} &  \text{\url{github.com/khskrede/mehh}}
+            \end{array}$
   \end{itemize}
 \end{slide}
 
@@ -102,6 +107,7 @@
         global_env = config.global_env
         heap       = config.heap
     \end{minted}
+    % Higher-level than compiler
   \end{center}
     % Very high level compared to high performance
     % compilers and interpreters
@@ -109,9 +115,7 @@
 
 \begin{slide}{Performance}
   \begin{itemize}
-    \item Thomassen's work sometimes beat GHCi
-    \item Skrede \& Thomassen, both core, both lose (badly) to GHC
-    \item Current implementation is \emph{super-preliminary}
+    \item Skrede \& Thomassen, both Core, faster than GHCi, slower than GHC
     \item Pycket (Tomorrow, Session 1) produces promising results
     \item What can we do to \emph{efficiently JIT} a lazy language?
     \begin{itemize}
@@ -121,7 +125,6 @@
     \end{itemize}
     % In fact, the STG machine itself is suboptimal as it is morbidly concerned
     % with the low level details
-    \item Higher-level than compiler  (!! SHOULD WE SAY THIS !!)
   \end{itemize}
 \end{slide}
 
@@ -141,9 +144,12 @@
     % Validate some claims with Pycket
 \end{slide}
 
-\begin{slide}{Links and Stuff}
+\begin{slide}{Conclusion}
     \begin{center}
-        github: \href{https://github.com/cgswords/laurens}{https://github.com/cgswords/laurens}
+        {\sc {\Large Thank You}}
+
+        \vspace{2em}
+        Preliminary Implementation\\\href{github.com/cgswords/laurens}{github.com/cgswords/laurens}
     \end{center}
 \end{slide}
 
