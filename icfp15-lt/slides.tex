@@ -71,7 +71,7 @@
   \begin{itemize}
     % \item Language+Framework for implementing \emph{dynamic} language interpreters
     % \item Includes a runtime system with language agnostic JIT compiler
-    \item RPython is for tracing JITs for \emph{dynamic} languages
+    \item RPython includes a tracing JIT for \emph{dynamic} languages
     % \item Includes a runtime system with language agnostic JIT compiler
     % \item The Haskell heap is a dynamic program
     \item Haskell's heap \emph{looks} dynamic during execution
@@ -127,6 +127,10 @@
         upd_stack  = config.upd_stack
         global_env = config.global_env
         heap       = config.heap
+        # Dispatch on |code| ...
+
+      while True:
+        config = config.code.step(config)
     \end{minted}
     % Higher-level than compiler
   \end{center}
