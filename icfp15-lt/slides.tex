@@ -9,6 +9,7 @@
 \usepackage{array}
 \usepackage{amsmath}
 \usepackage{booktabs}
+\usepackage{graphicx}
 
 \usepackage[cm-default]{fontspec}
 \usepackage{xunicode}
@@ -69,6 +70,16 @@
     % What is RPython
 \end{slide}
 
+\begin{slide}{Design - Classical STG}
+  \begin{center}
+  \includegraphics[scale=0.3]{stg-def}
+  \end{center}
+    % STG Machine
+    % Very high level compared to high performance
+    % compilers and interpreters
+\end{slide}
+
+
 \begin{slide}{Design}
     % STG Machine
     % Very high level compared to high performance
@@ -76,6 +87,19 @@
 \end{slide}
 
 \begin{slide}{Performance}
+    % Validate some claims with Pycket
+\end{slide}
+
+\begin{slide}{Moving Forward}
+  \begin{itemize}
+    \item Support additional (modern) STG operations
+    \item Construct front-end parser
+    \item Perform additional tuning
+    \begin{itemize}
+      \item Utilize Pycket's callgraph model
+      \item Explore stack-shape-based tracing
+    \end{itemize}
+  \end{itemize}
     % Validate some claims with Pycket
 \end{slide}
 
