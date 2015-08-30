@@ -78,13 +78,34 @@
     \item Previous work:
 
             \vspace*{1em}
-            $\begin{array}{l@{}l}\left. \begin{array}{@{}l@{}}
+            $\begin{array}{r@{}c@{}l}\begin{array}{r}
             \text{Carl Friedrich Bolz} \\
             \text{Even Wiik Thomassen}\\
-            \end{array} \right\}  & \text{Implementing Haskell in RPython}\\\\
-            \text{Knut Halvor Skrede} &  \text{\url{github.com/khskrede/mehh}}
+            \end{array} & \biggr\}  & \text{Implementing Haskell in RPython}\\\\
+            \begin{array}{r}\text{Knut Halvor Skrede}\end{array} & \biggr\} & 
+            \begin{array}{l@{}}
+            \text{Just-In-Time compilation of}\\
+            \text{Haskell with PyPy and GHC}
+            \end{array}\\\\
             \end{array}$
+
+    \item Both interpret Core, beat GHCi, lose to GHC
   \end{itemize}
+\end{slide}
+
+\begin{slide}{What Can We Do?}
+
+  \begin{center}
+  Can we \emph{Efficiently} JIT a lazy language?
+
+  \vspace{3em}
+
+  Pycket\footnote{Tomorrow, Session 1} uses an abstract machine with success
+
+  \vspace{3em}
+
+  What would that look like?
+  \end{center}
 \end{slide}
 
 \begin{slide}{Design - Classical STG}
@@ -113,34 +134,37 @@
     % compilers and interpreters
 \end{frame}
 
-\begin{slide}{Performance}
-  \begin{itemize}
-    \item Skrede \& Thomassen, both Core, faster than GHCi, slower than GHC
-    \item Pycket (Tomorrow, Session 1) produces promising results
-    \item What can we do to \emph{efficiently JIT} a lazy language?
-    \begin{itemize}
-      \item Utilize Pycket's callgraph model (or suitable variant)
-      \item Explore stack-shape-based tracing
-      \item Expose more optimization opportunities to the JIT
-    \end{itemize}
-    % In fact, the STG machine itself is suboptimal as it is morbidly concerned
-    % with the low level details
-  \end{itemize}
+\begin{slide}{What Else Can We Do?}
+
+
+  \begin{center}
+  Utilize callgraph model (or suitable variant) from Pycket
+
+  \vspace{3em}
+  
+  Expose more optimization opportunities for abstract machines (w.r.t STG and generally)
+
+  \vspace{3em}
+
+  Explore tracing in a lazy language\\
+  \{fusion, eliding updates, eliminating allocation, ...\}
+  \end{center}
 \end{slide}
 
+
+
 \begin{slide}{Moving Forward}
-  \begin{itemize}
-    \item Refactor into Python OO style
-    \item Support additional (modern) STG operations
-    \item Construct front-end parser
-    \item Perform additional tuning
-    \begin{itemize}
-      \item Utilize Pycket's callgraph model (or suitable variant)
-      \item Explore stack-shape-based tracing
-      \item Expose more optimization opportunities to the JIT
-      \item Explore dynamic optimization/analysis
-    \end{itemize}
-  \end{itemize}
+  \begin{center}
+    Refactor implementation into canonical Python
+
+    \vspace{3em}
+
+    Support additional (modern) STG operations
+
+    \vspace{3em}
+    
+    Construct front-end parser
+  \end{center}
     % Validate some claims with Pycket
 \end{slide}
 
