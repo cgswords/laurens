@@ -68,6 +68,10 @@
 
 \begin{slide}{Background}
     % What is RPython
+  \begin{itemize}
+    \item Framework for implementing \emph{dynamic} language interpreters
+    \item The Haskell heap is a dynamic program
+  \end{itemize}
 \end{slide}
 
 \begin{slide}{Design - Classical STG}
@@ -78,7 +82,6 @@
   % Very high level compared to high performance
   % compilers and interpreters
 \end{slide}
-
 
 \begin{slide}{Design}
     % Very high level compared to high performance
@@ -95,8 +98,9 @@
     \item Construct front-end parser
     \item Perform additional tuning
     \begin{itemize}
-      \item Utilize Pycket's callgraph model
+      \item Utilize Pycket's callgraph model (or suitable variant)
       \item Explore stack-shape-based tracing
+      \item Expose more optimization opportunities to the JIT
     \end{itemize}
   \end{itemize}
     % Validate some claims with Pycket
