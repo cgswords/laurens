@@ -15,11 +15,11 @@
 \usepackage{xunicode}
 \usepackage{xltxtra}
 
-\usepackage{xcolor}
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows}
 \usetikzlibrary{decorations.text}
 \usetikzlibrary{shapes,backgrounds}
+\usepackage{animate}
 
 \setbeamertemplate{navigation symbols}{}
 \usecolortheme[RGB={125,17,12}]{structure}
@@ -29,7 +29,7 @@
 
 \definecolor{titlered}{rgb}{0.8,0.1,0.1}
 \definecolor{white}{rgb}{1.0,1.0,1.0}
-\definecolor{cream}{RGB}{225,216,183}
+\definecolor{cream}{RGB}{218,165,32}
 
 \newenvironment{slide}[1]{\begin{frame}\frametitle{#1}}{\end{frame}}
 \newenvironment{fragslide}[1]{\begin{frame}[fragile]\frametitle{#1}}{\end{frame}}
@@ -47,7 +47,12 @@
     Indiana University\\ Bloomington, USA
 }
 
-\date{Haskell Implementors Workshop -- Lightning Talk\\ August 31st 2015}
+\newcommand{\coollightning}{%
+\begin{animateinline}[autoplay,loop]{2}%
+{\color{cream}{\bf $\lightning$}}%
+\newframe\end{animateinline}}
+
+\date{Haskell Implementors Workshop -- \coollightning Lightning Talk \coollightning \\ August 31st 2015}
 
 \newcommand{\gcol}[2]{\color{#1} #2 \color{black}}
 \newcommand{\cek}[3]{\langle \gcol{expr}{#1} , \gcol{env}{#2} , \gcol{cont}{#3} \rangle}
