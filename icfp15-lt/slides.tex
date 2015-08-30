@@ -1,0 +1,90 @@
+\documentclass[xetex,serif,mathserif]{beamer}
+
+\usepackage{hyperref}
+\usepackage{minted}
+\usepackage{stmaryrd}
+\usepackage{soul}
+\usepackage{graphicx}
+\usepackage{alltt}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{booktabs}
+
+\usepackage[cm-default]{fontspec}
+\usepackage{xunicode}
+\usepackage{xltxtra}
+
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+\usetikzlibrary{decorations.text}
+\usetikzlibrary{shapes,backgrounds}
+
+\setmainfont{Linux Libertine O}
+
+\setbeamertemplate{navigation symbols}{}
+\usecolortheme[RGB={125,17,12}]{structure}
+\usefonttheme{serif}
+\usefonttheme{structurebold}
+\setbeamercolor{description item}{fg=black}
+
+\definecolor{titlered}{rgb}{0.8,0.1,0.1}
+\definecolor{white}{rgb}{1.0,1.0,1.0}
+\definecolor{cream}{RGB}{225,216,183}
+
+\newenvironment{slide}[1]{\begin{frame}\frametitle{#1}}{\end{frame}}
+\newenvironment{fragslide}[1]{\begin{frame}[fragile]\frametitle{#1}}{\end{frame}}
+\newenvironment{verbslide}[1]{\begin{frame}[containsverbatim]\frametitle{#1}}{\end{frame}}
+
+\definecolor{highlight}{rgb}{0.8,0.1,0.1}
+\definecolor{expr}{rgb}{0.8,0.1,0.1}
+\definecolor{cont}{rgb}{0.1,0.2,0.8}
+\definecolor{env}{rgb}{0.0,0.0,0.0}
+
+\title{Laurens: A Tracing JIT For a Functional Language}
+\author[shortname]{Spenser Bauman \and Cameron Swords}
+
+\institute[shortinst]{
+    Indiana University Bloomington, USA
+}
+
+\date{Haskell Implementors Workshop \\ August 31st 2015}
+
+\newcommand{\gcol}[2]{\color{#1} #2 \color{black}}
+\newcommand{\cek}[3]{\langle \gcol{expr}{#1} , \gcol{env}{#2} , \gcol{cont}{#3} \rangle}
+
+\tikzstyle{racket} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm,text centered, draw=black, fill=red!60]
+\tikzstyle{json} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm,text centered, draw=black, fill=blue!60]
+\tikzstyle{python} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm,text centered, draw=black, fill=green!60]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+
+\def\theFancyVerbLine{%
+  \rmfamily\tiny\arabic{FancyVerbLine}%
+  {\tikz[remember picture,overlay]\node(minted-\arabic{FancyVerbLine}){};}%
+}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{slide}{Background}
+    % What is RPython
+\end{slide}
+
+\begin{slide}{Design}
+    % STG Machine
+    % Very high level compared to high performance
+    % compilers and interpreters
+\end{slide}
+
+\begin{slide}{Performance}
+    % Validate some claims with Pycket
+\end{slide}
+
+\begin{slide}{Links and Stuff}
+    \begin{center}
+        github: \href{https://github.com/cgswords/laurens}{https://github.com/cgswords/laurens}
+    \end{center}
+\end{slide}
+
+\end{document}
