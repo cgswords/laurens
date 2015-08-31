@@ -1,5 +1,36 @@
 from collections import deque
 
+@purefunction
+def vals(env, global_env, k):
+  logMsg("Vals with ", str(k))
+  if k == []:
+    return []
+  return [val(env, global_env, v) for v in k] # map(lambda v : val(env, global_env, v), k)
+
+@purefunction
+def val(env, global_env, k):
+  logMsg("Val with ", str(k))
+  res = k
+  if type(k) is ast.ast.Lit:
+    res = ast.ast.Value(k.value, True)
+  elif type(k) is ast.ast.Var:
+    var = k.variable
+    if var in env:
+      res = env[var]
+    elif var in global_env:
+      res = global_env[var]
+  elif type(k) is ast.ast.Atom:
+    litHuh = k.isLit
+    if litHuh:
+      res = ast.ast.Value(k.value, True)
+    elif k.value in env:
+      res = env[k.value]
+    else:
+      res = global_env[k.value]
+
+  assert isinstance(res,ast.ast.ValAST)
+  return res 
+
 class AST(object):
   _attrs_ = []
   def __init__(self):
@@ -48,7 +79,6 @@ class Lambda(AST):
     res += "\n\t - expr: "
     res += str(self.expr)
     return res
-  
 
 class Let(AST):
   def __init__(self, bindings, expr):
@@ -66,11 +96,54 @@ class Case(AST):
     self.case_expr = expr
     self.alts      = alts
 
+  def eval(self, config):
+    ret_stack  = config.ret_stack
+    cenv       = config.code.env
+    
+    debug("=> Case")
+    case      = self
+    local_env = cenv.copy()
+    config.ret_stack.push(ast.cont.CaseCont(case.alts, local_env))
+
+    config.code = op.Eval(case.case_expr, local_env)
+    return config
+
 class App(AST):
   def __init__(self, var, atoms):
     self.rator = var
     self.rands = atoms
- 
+
+  def eval(self, config):
+    cenv       = config.code.env
+    arg_stack  = config.arg_stack
+    global_env = config.global_env
+    
+    debug("=> App")
+    lookup   = val(cenv, global_env, self.rator)
+    lookupTy = type(lookup)
+    logMsg("Lookup", str(lookup))
+    if lookupTy is ast.ast.Value:
+      if lookup.isAddr:
+        logMsg("Rands", str(self.rands))
+        lookup_rands = vals(cenv, global_env, self.rands)
+
+        logMsg("Looked up", str(lookup_rands))
+        arg_stack.extend(lookup_rands)
+        
+        config.code = op.Enter(lookup.value)
+        debug(str(arg_stack.peek()))
+        return config
+      
+      elif lookup.isInt and self.rands == []:
+        config.code = op.ReturnInt(lookup.value)
+        return config
+      
+      else:  
+        raise Exception('integer literal in application position', lookup.value)
+    
+    else:
+        raise Exception('operator wasn not a value', self.rator, lookup)
+
   def __str__(self):
     res  = "App"
     res += "\n - rator: "
@@ -85,10 +158,81 @@ class Constr(AST):
     self.constructor = constr
     self.rands       = atoms
 
+  def eval(self, config):
+    debug("=> Constr")
+    constr = config.code.expr
+    local_env = cenv.copy()
+
+    config.code = op.ReturnCon(constr.constructor, 
+                               dict(zip(constr.rands,
+                                        vals(local_env, global_env, constr.rands))))
+    return config
+
 class PrimOp(AST):
   def __init__(self, op, atoms):
     self.oper  = op
     self.atoms = atoms
+
+  def eval(self, config):
+    code       = config.code
+    arg_stack  = config.arg_stack
+    ret_stack  = config.ret_stack
+    upd_stack  = config.upd_stack
+    global_env = config.global_env
+    heap       = config.heap
+    cenv       = code.env
+    
+    debug("=> PrimOp")
+    debug(str(self.oper))
+    if self.oper == "+": ## From the book: these must already be forced!
+      debug("Plus")
+      lookups = vals(code.env, global_env, self.atoms)
+      x1      = lookups[0]
+      x2      = lookups[1]
+      assert isinstance(x1,ast.ast.ValAST)
+      assert isinstance(x2,ast.ast.ValAST)
+      res     = x1.value + x2.value
+      debug("result")
+      debug(str(res))
+      config.code = op.ReturnInt(res) 
+      return config
+
+    elif self.oper == "-": ## From the book: these must already be forced!
+      debug("Minus")
+      lookups = vals(code.env, global_env, self.atoms)
+      x1      = lookups[0]
+      x2      = lookups[1]
+      assert isinstance(x1,ast.ast.ValAST)
+      assert isinstance(x2,ast.ast.ValAST)
+      logMsg("x1: ",str(x1))
+      logMsg("x2: ",str(x2))
+      res     = x1.value - x2.value
+      debug("result")
+      debug(str(res))
+      config.code = op.ReturnInt(res) 
+      return config
+
+    elif self.oper == "*": ## From the book: these must already be forced!
+      lookups     = vals(code.env, global_env, self.atoms)
+      x1          = lookups[0]
+      x2          = lookups[1]
+      assert isinstance(x1,ast.ast.ValAST)
+      assert isinstance(x2,ast.ast.ValAST)
+      res         = x1.value * x2.value
+      config.code = op.ReturnInt(res)
+      return config
+
+    elif self.oper == "=": ## From the book: these must already be forced!
+      lookups = vals(code.env, global_env, self.atoms)
+      x1      = lookups[0]
+      x2      = lookups[1]
+      assert isinstance(x1,ast.ast.ValAST)
+      assert isinstance(x2,ast.ast.ValAST)
+      config.code = op.ReturnInt(x1 == x2) 
+      return config
+
+    else:
+      raise Exception('invalid primop', str(self))
 
 ## I must use these instead of lists to preserve the default case
 class AlgAlts(AST):
@@ -139,6 +283,13 @@ class Atom(ValAST):
     self.isVar = varHuh
     self.isLit = not varHuh
 
+  def eval(self, config):
+    if self.isLit:
+      config.code = op.ReturnInt(self.value)
+    else:
+      config.code = op.ReturnInt(val(config.code.cenv, global_env, self).value)
+    return config
+
   def __str__(self):
     res  = "Atom"
     res += "\n - value: "
@@ -152,6 +303,10 @@ class Lit(ValAST):
     self.value  = val
     self.isLit = True
 
+  def eval(self, config):
+    config.code = op.ReturnInt(self.value)
+    return config
+
   def __str__(self):
     res  = "Lit> "
     res += " - value: "
@@ -162,6 +317,15 @@ class Var(AST):
   def __init__(self, name):
     self.variable = name
     self.isVar = True
+
+  def eval(config):
+    global_env = config.global_env
+    cenv       = config.code.env
+
+    debug("=> Var")
+    res = val(cenv, global_env, self)
+    assert isinstance(res,ast.ast.ValAST)
+    config.code = op.ReturnInt(res.value)
 
   def __str__(self):
     res  = "Var"
