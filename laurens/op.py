@@ -50,7 +50,7 @@ class Eval(Op):
 
   @unroll_safe
   def step(self,config):
-    return config.code.eval(config)
+    return expr.eval(config)
 
 class Enter(Op):
   def __init__(self,addr):
